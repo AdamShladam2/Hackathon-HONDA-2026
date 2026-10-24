@@ -1,0 +1,6 @@
+{
+  "name": "Campusr",
+  "description": "School-scoped project sharing, teammate discovery, and class contribution grading platform for college students and educators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
