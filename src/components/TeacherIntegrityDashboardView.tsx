@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { StudentSubmission } from '../types';
+import { openAttachedFile } from '../services/fileStore';
 import { MANDATORY_LIMITATIONS_NOTICE } from '../services/similarityChecker';
 
 export const TeacherIntegrityDashboardView: React.FC = () => {
@@ -335,6 +336,24 @@ export const TeacherIntegrityDashboardView: React.FC = () => {
                         </span>
                       )}
                     </div>
+
+                    {/* Uploaded / Canvas-imported files */}
+                    {sub.attachedFiles && sub.attachedFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {sub.attachedFiles.map((file) => (
+                          <button
+                            key={file.id}
+                            type="button"
+                            onClick={() => openAttachedFile(file)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-md border border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 cursor-pointer"
+                            title={file.source === 'canvas' ? `From Canvas: ${file.canvasAssignmentName}` : file.type}
+                          >
+                            {file.name}
+                            <span className="text-slate-400">· {file.size}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 

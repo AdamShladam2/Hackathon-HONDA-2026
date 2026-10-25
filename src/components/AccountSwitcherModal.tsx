@@ -8,6 +8,7 @@ import {
   Sparkles,
   Check,
   RotateCcw,
+  LogOut,
   ShieldCheck,
   Lightbulb,
 } from 'lucide-react';
@@ -17,7 +18,7 @@ interface AccountSwitcherModalProps {
 }
 
 export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({ onClose }) => {
-  const { currentUser, allDemoAccounts, switchUser, resetAllDemoData, loginAsTeacher } = useApp();
+  const { currentUser, allDemoAccounts, switchUser, resetAllDemoData, loginAsTeacher, isSignedIn, signOut } = useApp();
 
   const handleSelect = (userId: string) => {
     switchUser(userId);
@@ -302,12 +303,26 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({ onCl
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset Demo State</span>
           </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 rounded-lg cursor-pointer"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            {isSignedIn && (
+              <button
+                onClick={() => {
+                  signOut();
+                  onClose();
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Sign out / use my email
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 rounded-lg cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

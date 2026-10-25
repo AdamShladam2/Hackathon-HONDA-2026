@@ -10,9 +10,20 @@ import {
   Inbox,
   ChevronDown,
   Plus,
-  Layers,
-  Sparkles,
+  Lock,
+  LayoutGrid,
 } from 'lucide-react';
+import { ViewType } from '../context/AppContext';
+
+interface NavItem {
+  label: string;
+  views: ViewType[];
+  icon: React.ComponentType<{ className?: string }>;
+  iconClass: string;
+  activeClass: string;
+  badge?: number;
+  badgeClass?: string;
+}
 
 export const Navbar: React.FC = () => {
   const {
@@ -24,13 +35,110 @@ export const Navbar: React.FC = () => {
     openAccountSwitcher,
     currentUser,
     canvasConnection,
-    openCanvasModal,
+    appMode,
+    setAppMode,
+    canAccessCampus,
+    userCampus,
+    campusClassAssignments,
+    openStudentSubmitModal,
   } = useApp();
 
   const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
-  const [hubsDropdownOpen, setHubsDropdownOpen] = useState(false);
 
   const isTeacher = currentUser.identities.includes('Teacher / Professor');
+
+  const teammatesItem: NavItem = {
+    label: 'Find Teammates',
+    views: ['find-teammates', 'teammate-match'],
+    icon: Users,
+    iconClass: 'text-purple-600',
+    activeClass: 'bg-purple-50 text-purple-700 font-bold border border-purple-200',
+  };
+  const sharedItems: NavItem[] = [
+    {
+      label: 'My Projects',
+      views: ['my-projects', 'workspace'],
+      icon: FolderKanban,
+      iconClass: 'text-emerald-600',
+      activeClass: 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200',
+    },
+    {
+      label: 'Inbox',
+      views: ['inbox'],
+      icon: Inbox,
+      iconClass: 'text-slate-500',
+      activeClass: 'bg-slate-100 text-slate-900 font-bold',
+      badge: unreadCount,
+      badgeClass: 'bg-blue-600 text-white',
+    },
+    {
+      label: 'Profile',
+      views: ['profile'],
+      icon: User,
+      iconClass: 'text-slate-500',
+      activeClass: 'bg-slate-100 text-slate-900 font-bold',
+    },
+  ];
+
+  // Each mode is its own section of the app with its own tabs
+  const navItems: NavItem[] =
+    appMode === 'campus'
+      ? [
+          {
+            label: 'Campus Hub',
+            views: ['campus-hub'],
+            icon: GraduationCap,
+            iconClass: 'text-emerald-600',
+            activeClass: 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200',
+          },
+          {
+            label: 'Canvas Classes',
+            views: ['canvas-classes'],
+            icon: GraduationCap,
+            iconClass: 'text-red-600',
+            activeClass: 'bg-red-50 text-red-700 font-bold border border-red-200',
+            badge: canvasConnection.isConnected ? canvasConnection.courses.length : undefined,
+            badgeClass: 'bg-red-100 text-red-800',
+          },
+          { ...teammatesItem, label: 'Classmates' },
+          ...(isTeacher
+            ? [
+                {
+                  label: 'Teacher Dashboard',
+                  views: ['teacher-dashboard'] as ViewType[],
+                  icon: GraduationCap,
+                  iconClass: 'text-indigo-600',
+                  activeClass: 'bg-indigo-900 text-white font-bold shadow-sm',
+                },
+              ]
+            : []),
+          ...sharedItems,
+        ]
+      : [
+          {
+            label: 'Discover',
+            views: ['discover'],
+            icon: Compass,
+            iconClass: 'text-blue-600',
+            activeClass: 'bg-blue-50 text-blue-700 font-bold border border-blue-200',
+          },
+          teammatesItem,
+          {
+            label: 'Work Hub',
+            views: ['work-hub'],
+            icon: Briefcase,
+            iconClass: 'text-blue-600',
+            activeClass: 'bg-blue-50 text-blue-700 font-bold border border-blue-200',
+          },
+          {
+            label: 'Showcase',
+            views: ['showcase'],
+            icon: LayoutGrid,
+            iconClass: 'text-slate-600',
+            activeClass: 'bg-slate-100 text-slate-900 font-bold',
+          },
+          ...sharedItems,
+        ];
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -38,7 +146,7 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between gap-4 h-16">
           {/* Logo / Brand Mark */}
           <button
-            onClick={() => setActiveView('discover')}
+            onClick={() => setActiveView(appMode === 'campus' ? 'campus-hub' : 'discover')}
             className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-sm transition-transform group-hover:scale-105">
@@ -51,221 +159,60 @@ export const Navbar: React.FC = () => {
             </div>
           </button>
 
-          {/* 4 Primary Navigation Sections for Students */}
-          <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
-            {/* 1. Discover */}
+          {/* Mode Switch: Campus (.edu, own school) vs Discover (everyone) */}
+          <div className="hidden md:flex items-center p-0.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold shrink-0">
             <button
-              onClick={() => setActiveView('discover')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                activeView === 'discover'
-                  ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              onClick={() => setAppMode('campus')}
+              title={
+                canAccessCampus
+                  ? `Campus mode for ${userCampus?.name}`
+                  : 'Campus mode requires a .edu school email'
+              }
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                appMode === 'campus'
+                  ? 'bg-white text-red-700 shadow-sm'
+                  : canAccessCampus
+                  ? 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-400 cursor-not-allowed'
               }`}
             >
-              <Compass className="w-4 h-4 text-blue-600" />
+              {canAccessCampus ? <GraduationCap className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+              <span>Campus</span>
+            </button>
+            <button
+              onClick={() => setAppMode('discover')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                appMode === 'discover' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
               <span>Discover</span>
             </button>
+          </div>
 
-            {/* 2. Find Teammates */}
-            <button
-              onClick={() => setActiveView('find-teammates')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                activeView === 'find-teammates' || activeView === 'teammate-match'
-                  ? 'bg-purple-50 text-purple-700 font-bold border border-purple-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <Users className="w-4 h-4 text-purple-600" />
-              <span>Find Teammates</span>
-            </button>
-
-            {/* Canvas Classes & People */}
-            <button
-              onClick={() => setActiveView('canvas-classes')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                activeView === 'canvas-classes'
-                  ? 'bg-red-50 text-red-700 font-bold border border-red-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4 text-red-600" />
-              <span>Canvas Classes</span>
-              {canvasConnection.isConnected && (
-                <span className="px-1.5 py-0.2 text-[10px] font-bold bg-red-100 text-red-800 rounded-full">
-                  {canvasConnection.courses.length}
-                </span>
-              )}
-            </button>
-
-            {/* 3. My Projects */}
-            <button
-              onClick={() => setActiveView('my-projects')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                activeView === 'my-projects' || activeView === 'workspace'
-                  ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <FolderKanban className="w-4 h-4 text-emerald-600" />
-              <span>My Projects</span>
-            </button>
-
-            {/* 4. Profile */}
-            <button
-              onClick={() => setActiveView('profile')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                activeView === 'profile'
-                  ? 'bg-slate-100 text-slate-900 font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <User className="w-4 h-4 text-slate-500" />
-              <span>Profile</span>
-            </button>
-
-            {/* Dedicated Faculty Badge if logged in as teacher */}
-            {isTeacher && (
-              <button
-                onClick={() => setActiveView('teacher-dashboard')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 ml-1 cursor-pointer ${
-                  activeView === 'teacher-dashboard'
-                    ? 'bg-indigo-900 text-white font-bold shadow-sm'
-                    : 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200'
-                }`}
-              >
-                <GraduationCap className="w-4 h-4 text-indigo-600" />
-                <span>Teacher Dashboard</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-200 text-indigo-900">
-                  FACULTY
-                </span>
-              </button>
-            )}
-
-            {/* Secondary Menu Dropdown: "More Hubs & Tools" */}
-            <div className="relative ml-1">
-              <button
-                onClick={() => setHubsDropdownOpen(!hubsDropdownOpen)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  ['campus-hub', 'work-hub', 'showcase', 'inbox'].includes(activeView)
-                    ? 'bg-slate-100 text-slate-900 font-bold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-              >
-                <Layers className="w-4 h-4 text-slate-500" />
-                <span>More Hubs</span>
-                {unreadCount > 0 && (
-                  <span className="px-1.5 py-0.2 text-[10px] font-bold bg-blue-600 text-white rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
-
-              {hubsDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setHubsDropdownOpen(false)} />
-                  <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-left">
-                    <button
-                      onClick={() => {
-                        setHubsDropdownOpen(false);
-                        setActiveView('campus-hub');
-                      }}
-                      className="w-full px-3.5 py-2.5 text-xs hover:bg-emerald-50 text-slate-800 hover:text-emerald-900 flex items-start gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <GraduationCap className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="font-bold">Campus Hub</div>
-                        <div className="text-[10px] text-slate-500">University courses, teams & assignments</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setHubsDropdownOpen(false);
-                        setActiveView('canvas-classes');
-                      }}
-                      className="w-full px-3.5 py-2.5 text-xs hover:bg-red-50 text-slate-800 hover:text-red-900 flex items-start gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <GraduationCap className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="font-bold flex items-center gap-1.5">
-                          <span>Canvas Classes & Roster</span>
-                          {canvasConnection.isConnected && (
-                            <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-red-100 text-red-800 font-bold">
-                              {canvasConnection.courses.length}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-slate-500">Access classmates via school email</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setHubsDropdownOpen(false);
-                        setActiveView('work-hub');
-                      }}
-                      className="w-full px-3.5 py-2.5 text-xs hover:bg-blue-50 text-slate-800 hover:text-blue-900 flex items-start gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <Briefcase className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="font-bold">Work Hub</div>
-                        <div className="text-[10px] text-slate-500">Professional projects & independent sprints</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setHubsDropdownOpen(false);
-                        setActiveView('showcase');
-                      }}
-                      className="w-full px-3.5 py-2.5 text-xs hover:bg-slate-50 text-slate-800 flex items-start gap-2.5 transition-colors cursor-pointer border-t border-slate-100"
-                    >
-                      <FolderKanban className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="font-bold">Universal Showcase</div>
-                        <div className="text-[10px] text-slate-500">All cross-hub published demos</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setHubsDropdownOpen(false);
-                        setActiveView('teacher-dashboard');
-                      }}
-                      className="w-full px-3.5 py-2.5 text-xs hover:bg-indigo-50 text-indigo-900 flex items-start gap-2.5 transition-colors cursor-pointer border-t border-slate-100"
-                    >
-                      <GraduationCap className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="font-bold">Teacher Dashboard</div>
-                        <div className="text-[10px] text-slate-500">Class management & similarity audits</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setHubsDropdownOpen(false);
-                        setActiveView('inbox');
-                      }}
-                      className="w-full px-3.5 py-2.5 text-xs hover:bg-slate-50 text-slate-800 flex items-start gap-2.5 transition-colors cursor-pointer border-t border-slate-100"
-                    >
-                      <Inbox className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <div className="font-bold flex items-center justify-between">
-                          <span>Inbox & Applications</span>
-                          {unreadCount > 0 && (
-                            <span className="px-1.5 py-0.2 text-[10px] font-bold bg-blue-600 text-white rounded-full">
-                              {unreadCount}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-slate-500">Messages, invitations, & code access</div>
-                      </div>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+          {/* Mode-specific Primary Navigation */}
+          <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.views.includes(activeView);
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => setActiveView(item.views[0])}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    isActive ? item.activeClass : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${item.iconClass}`} />
+                  <span>{item.label}</span>
+                  {item.badge ? (
+                    <span className={`px-1.5 py-0.2 text-[10px] font-bold rounded-full ${item.badgeClass}`}>
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Persona Switcher & New CTA */}
@@ -312,6 +259,45 @@ export const Navbar: React.FC = () => {
                     onClick={() => setCreateDropdownOpen(false)}
                   />
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-left">
+                    {appMode === 'campus' ? (
+                      <>
+                    <button
+                      onClick={() => {
+                        setCreateDropdownOpen(false);
+                        openShareModal({ isClassProject: true });
+                      }}
+                      className="w-full px-3.5 py-2 text-xs hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 flex items-start gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <FolderKanban className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold">Add Class Project</div>
+                        <div className="text-[10px] text-slate-500">
+                          Upload files or import from Canvas
+                        </div>
+                      </div>
+                    </button>
+
+                    {campusClassAssignments.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setCreateDropdownOpen(false);
+                          openStudentSubmitModal(campusClassAssignments[0]);
+                        }}
+                        className="w-full px-3.5 py-2 text-xs hover:bg-red-50 text-slate-800 hover:text-red-800 flex items-start gap-2.5 transition-colors cursor-pointer border-t border-slate-100"
+                      >
+                        <GraduationCap className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-bold">Submit Assignment Work</div>
+                          <div className="text-[10px] text-slate-500">
+                            Attach your files or Canvas submissions
+                          </div>
+                        </div>
+                      </button>
+                    )}
+
+                      </>
+                    ) : (
+                      <>
                     <button
                       onClick={() => {
                         setCreateDropdownOpen(false);
@@ -344,7 +330,10 @@ export const Navbar: React.FC = () => {
                       </div>
                     </button>
 
-                    {isTeacher && (
+                      </>
+                    )}
+
+                    {isTeacher && canAccessCampus && (
                       <button
                         onClick={() => {
                           setCreateDropdownOpen(false);
@@ -368,60 +357,26 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation bar (Consolidated 4 items + Hubs) */}
-        <div className="lg:hidden flex items-center justify-around py-2 border-t border-slate-100 text-xs font-semibold overflow-x-auto">
+        {/* Mobile Navigation bar (mode switch + mode-specific items) */}
+        <div className="lg:hidden flex items-center justify-around gap-1 py-2 border-t border-slate-100 text-xs font-semibold overflow-x-auto">
           <button
-            onClick={() => setActiveView('discover')}
-            className={`py-1 px-2 shrink-0 ${
-              activeView === 'discover' ? 'text-blue-600 font-bold' : 'text-slate-600'
-            }`}
+            onClick={() => setAppMode(appMode === 'campus' ? 'discover' : 'campus')}
+            className="py-1 px-2 shrink-0 rounded-md bg-slate-100 text-slate-700 font-bold flex items-center gap-1"
           >
-            Discover
+            {appMode === 'campus' ? <Compass className="w-3.5 h-3.5" /> : <GraduationCap className="w-3.5 h-3.5" />}
+            {appMode === 'campus' ? 'Discover' : 'Campus'}
           </button>
-          <button
-            onClick={() => setActiveView('find-teammates')}
-            className={`py-1 px-2 shrink-0 ${
-              activeView === 'find-teammates' || activeView === 'teammate-match'
-                ? 'text-purple-600 font-bold'
-                : 'text-slate-600'
-            }`}
-          >
-            Teammates
-          </button>
-          <button
-            onClick={() => setActiveView('canvas-classes')}
-            className={`py-1 px-2 shrink-0 ${
-              activeView === 'canvas-classes' ? 'text-red-600 font-bold' : 'text-slate-600'
-            }`}
-          >
-            Canvas
-          </button>
-          <button
-            onClick={() => setActiveView('my-projects')}
-            className={`py-1 px-2 shrink-0 ${
-              activeView === 'my-projects' || activeView === 'workspace'
-                ? 'text-emerald-600 font-bold'
-                : 'text-slate-600'
-            }`}
-          >
-            Projects
-          </button>
-          <button
-            onClick={() => setActiveView('profile')}
-            className={`py-1 px-2 shrink-0 ${
-              activeView === 'profile' ? 'text-blue-600 font-bold' : 'text-slate-600'
-            }`}
-          >
-            Profile
-          </button>
-          <button
-            onClick={() => setActiveView('campus-hub')}
-            className={`py-1 px-2 shrink-0 ${
-              activeView === 'campus-hub' ? 'text-blue-600 font-bold' : 'text-slate-500'
-            }`}
-          >
-            Campus
-          </button>
+          {navItems.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => setActiveView(item.views[0])}
+              className={`py-1 px-2 shrink-0 ${
+                item.views.includes(activeView) ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
     </header>

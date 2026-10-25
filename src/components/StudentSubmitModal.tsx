@@ -8,8 +8,11 @@ import {
   ShieldCheck,
   CheckCircle,
   AlertCircle,
+  Paperclip,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ProjectAttachedFile } from '../types';
+import { FileAttachmentInput } from './FileAttachmentInput';
 
 export const StudentSubmitModal: React.FC = () => {
   const {
@@ -18,7 +21,7 @@ export const StudentSubmitModal: React.FC = () => {
     closeStudentSubmitModal,
     currentUser,
     submitStudentWork,
-    classAssignments,
+    campusClassAssignments: classAssignments,
   } = useApp();
 
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>(
@@ -33,6 +36,7 @@ export const StudentSubmitModal: React.FC = () => {
   const [githubUrl, setGithubUrl] = useState('');
   const [googleDocsUrl, setGoogleDocsUrl] = useState('');
   const [individualContributionDesc, setIndividualContributionDesc] = useState('');
+  const [attachedFiles, setAttachedFiles] = useState<ProjectAttachedFile[]>([]);
 
   // Pre-fill with sample student content if Alex Chen
   React.useEffect(() => {
@@ -73,7 +77,9 @@ export const StudentSubmitModal: React.FC = () => {
       githubUrl: githubUrl.trim() ? githubUrl : undefined,
       googleDocsUrl: googleDocsUrl.trim() ? googleDocsUrl : undefined,
       individualContributionDesc,
+      attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
     });
+    setAttachedFiles([]);
 
     closeStudentSubmitModal();
   };
@@ -206,6 +212,19 @@ export const StudentSubmitModal: React.FC = () => {
               placeholder="Describe specifically what components, tests, and documentation you authored..."
               className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
               required
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <Paperclip className="w-3.5 h-3.5" />
+              Files (Optional)
+            </label>
+            <FileAttachmentInput
+              files={attachedFiles}
+              onChange={setAttachedFiles}
+              allowCanvasImport
+              canvasCourseCode={assignment?.classCode}
             />
           </div>
 

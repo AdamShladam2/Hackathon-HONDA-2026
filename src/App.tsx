@@ -30,6 +30,8 @@ import { RateTeammateModal } from './components/RateTeammateModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { CanvasClassmatesView } from './components/CanvasClassmatesView';
 import { CanvasConnectModal } from './components/CanvasConnectModal';
+import { ModeSelectView } from './components/ModeSelectView';
+import { SignInView } from './components/SignInView';
 import { CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
 
 const MainApp: React.FC = () => {
@@ -62,7 +64,29 @@ const MainApp: React.FC = () => {
     closeCanvasModal,
     toasts,
     removeToast,
+    hasChosenMode,
+    isSignedIn,
   } = useApp();
+
+  // Signed out: email sign-in (or pick a demo account)
+  if (!isSignedIn) {
+    return (
+      <>
+        <SignInView />
+        {isAccountSwitcherOpen && <AccountSwitcherModal onClose={closeAccountSwitcher} />}
+      </>
+    );
+  }
+
+  // Users first choose which section to enter: Campus (.edu) or Discover (everyone)
+  if (!hasChosenMode) {
+    return (
+      <>
+        <ModeSelectView />
+        {isAccountSwitcherOpen && <AccountSwitcherModal onClose={closeAccountSwitcher} />}
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">

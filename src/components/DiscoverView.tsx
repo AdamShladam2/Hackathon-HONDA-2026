@@ -24,7 +24,6 @@ import { Project } from '../types';
 export const DiscoverView: React.FC = () => {
   const {
     projects,
-    classProjects,
     setSelectedProject,
     openContributionAnalysisModal,
     setActiveView,
@@ -34,11 +33,12 @@ export const DiscoverView: React.FC = () => {
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'campus' | 'industry' | 'autonomous'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'industry' | 'autonomous'>('all');
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
   const [selectedProfessor, setSelectedProfessor] = useState<string>('all');
 
-  const allProjects = [...classProjects, ...projects];
+  // Class coursework lives in Campus mode; Discover only shows publicly shared projects
+  const allProjects = projects;
 
   // Primary 4-person spotlight project: BuckeyeRover Autonomous Terrain Navigator (proj-1)
   const spotlightProject =
@@ -78,7 +78,6 @@ export const DiscoverView: React.FC = () => {
       if (p.professorName !== selectedProfessor) return false;
     }
 
-    if (selectedCategory === 'campus') return p.hubType === 'campus' || Boolean(p.school || p.author.school || p.courseName || p.courseCode);
     if (selectedCategory === 'industry') return p.hubType === 'work';
     if (selectedCategory === 'autonomous')
       return (
@@ -91,7 +90,6 @@ export const DiscoverView: React.FC = () => {
 
   const categories = [
     { id: 'all', label: 'All Projects' },
-    { id: 'campus', label: 'Campus & Courses' },
     { id: 'industry', label: 'Industry & Open Source' },
     { id: 'autonomous', label: 'Autonomous & Robotics' },
   ];

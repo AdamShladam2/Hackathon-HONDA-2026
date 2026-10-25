@@ -26,6 +26,8 @@ import {
   CanvasUserConnection,
   TeamMember,
   ProjectAttachedFile,
+  CanvasAssignment,
+  UserIdentity,
 } from '../types';
 import {
   loadSavedCanvasConnection,
@@ -33,6 +35,7 @@ import {
   clearCanvasConnection,
   connectCanvasBySchoolEmail,
   getAllClassmates,
+  fetchCanvasAssignments,
 } from '../services/canvasService';
 import {
   ALL_DEMO_ACCOUNTS,
@@ -62,6 +65,13 @@ import {
 import { INITIAL_TEAMMATE_RATINGS, getUserRatingSummary } from '../data/ratingData';
 import { fetchUserRepos } from '../services/github';
 import { calculateSimilarity } from '../services/similarityChecker';
+import {
+  AppMode,
+  getCampusForEmail,
+  isSameCampus,
+  authorBelongsToCampus,
+} from '../services/campusAccess';
+import { InstitutionMeta } from '../data/canvasData';
 
 interface Toast {
   id: string;
@@ -83,18 +93,35 @@ export type ViewType =
   | 'workspace'
   | 'canvas-classes';
 
+// Views that only exist in Campus mode (.edu accounts) or Discover mode (everyone)
+export const CAMPUS_VIEWS: ViewType[] = ['campus-hub', 'canvas-classes', 'teacher-dashboard'];
+export const DISCOVER_VIEWS: ViewType[] = ['discover', 'work-hub', 'showcase'];
+
 interface AppContextType {
   // Current user & account switching
   currentUser: Author;
   allDemoAccounts: Author[];
   switchUser: (userId: string) => void;
+  isSignedIn: boolean;
+  signInWithEmail: (details: { email: string; name: string; identity: UserIdentity }) => { success: boolean; message: string };
+  signOut: () => void;
   userRepos: GitHubRepo[];
   isGitHubConnecting: boolean;
   connectGitHub: (username: string) => Promise<{ success: boolean; count: number; source: 'api' | 'mock' }>;
   disconnectGitHub: () => void;
 
+  // App modes: Campus (verified .edu, scoped to the user's school) vs Discover (everyone)
+  appMode: AppMode;
+  setAppMode: (mode: AppMode) => void;
+  hasChosenMode: boolean;
+  userCampus: InstitutionMeta | null;
+  canAccessCampus: boolean;
+  campusClassProjects: Project[];
+  campusClassAssignments: ClassAssignment[];
+
   // Canvas LMS & School Email Integration
   canvasConnection: CanvasUserConnection;
+  isDemoAccount: boolean;
   isCanvasConnecting: boolean;
   connectCanvas: (email: string, apiToken?: string, customDomain?: string) => Promise<{ success: boolean; message: string }>;
   disconnectCanvas: () => void;
@@ -105,6 +132,9 @@ interface AppContextType {
   setSelectedCanvasCourseId: (id: string) => void;
   allCanvasClassmates: CanvasClassmate[];
   classmatesLookingForTeam: CanvasClassmate[];
+  loadCanvasAssignments: (
+    courseId: string
+  ) => Promise<{ assignments: CanvasAssignment[]; source: 'canvas_api' | 'directory' }>;
 
   // Projects
   projects: Project[]; // All Showcase projects (combines work + campus showcase)
@@ -227,7 +257,8 @@ interface AppContextType {
     projectData: Omit<Project, 'id' | 'createdAt' | 'viewCount' | 'interestCount' | 'author' | 'teamMembers'> & {
       teamMembers?: TeamMember[];
       attachedFiles?: ProjectAttachedFile[];
-    }
+    },
+    options?: { campusHub?: boolean }
   ) => Project;
   addWorkProject: (projectData: Omit<Project, 'id' | 'createdAt' | 'viewCount' | 'interestCount' | 'author' | 'teamMembers'>) => Project;
   toggleInterest: (projectId: string) => void;
@@ -312,11 +343,27 @@ function saveToStorage<T>(key: string, data: T) {
   }
 }
 
+// Simple initials avatar for accounts created by email sign-in
+function initialsAvatar(name: string): string {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" fill="#4f46e5"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial,sans-serif" font-size="64" font-weight="700" fill="#fff">${initials}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Current User with fallback to Alex Chen
   const [currentUser, setCurrentUser] = useState<Author>(() => {
     return loadFromStorage<Author>('currentUser', DEMO_STUDENTS[0]);
   });
+
+  const [isSignedIn, setIsSignedIn] = useState<boolean>(() => loadFromStorage<boolean>('isSignedIn', true));
+  // Accounts created by signing in with an email (stored in this browser only)
+  const [localAccounts, setLocalAccounts] = useState<Author[]>(() => loadFromStorage<Author[]>('localAccounts', []));
 
   const [userRepos, setUserRepos] = useState<GitHubRepo[]>([]);
   const [isGitHubConnecting, setIsGitHubConnecting] = useState(false);
@@ -327,13 +374,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // Class Projects for Campus Hub
-  const [classProjects] = useState<Project[]>(() => {
+  const [classProjects, setClassProjects] = useState<Project[]>(() => {
     return loadFromStorage<Project[]>('classProjects', INITIAL_CLASS_PROJECTS);
   });
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeWorkspaceProject, setActiveWorkspaceProject] = useState<Project | null>(null);
-  const [activeView, setActiveView] = useState<ViewType>('discover');
+  const [activeView, setActiveViewState] = useState<ViewType>(() =>
+    loadFromStorage<AppMode>('appMode', 'discover') === 'campus' ? 'campus-hub' : 'discover'
+  );
+  const [appMode, setAppModeState] = useState<AppMode>(() => loadFromStorage<AppMode>('appMode', 'discover'));
+  const [hasChosenMode, setHasChosenMode] = useState<boolean>(() => loadFromStorage<boolean>('hasChosenMode', false));
+
+  // Campus identity comes from the account email (.edu only); older saved users fall back to the demo record
+  const accountEmail =
+    currentUser.email || ALL_DEMO_ACCOUNTS.find((a) => a.id === currentUser.id)?.email || '';
+  const userCampus = getCampusForEmail(accountEmail);
+  // Demo personas may use built-in sample Canvas courses; real accounts load live Canvas data
+  const isDemoAccount = ALL_DEMO_ACCOUNTS.some((a) => a.id === currentUser.id);
+  const canAccessCampus = userCampus !== null;
 
   // Teammate Ratings state
   const [teammateRatings, setTeammateRatings] = useState<TeammateRating[]>(() => {
@@ -357,8 +416,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
 
   // Canvas LMS & School Email Integration state
-  const [canvasConnection, setCanvasConnection] = useState<CanvasUserConnection>(() => loadSavedCanvasConnection());
+  const [rawCanvasConnection, setCanvasConnection] = useState<CanvasUserConnection>(() => loadSavedCanvasConnection());
   const [isCanvasConnecting, setIsCanvasConnecting] = useState(false);
+  // Canvas API token is kept in memory only for this session, never persisted
+  const [canvasApiToken, setCanvasApiToken] = useState<string | undefined>(undefined);
+
+  // A Canvas connection only counts when it belongs to the signed-in user's own campus
+  const canvasOwner = (rawCanvasConnection.ownerEmail || rawCanvasConnection.schoolEmail || '').toLowerCase();
+  const canvasMatchesCampus =
+    rawCanvasConnection.isConnected &&
+    canvasOwner === accountEmail.toLowerCase() &&
+    (isDemoAccount || rawCanvasConnection.source === 'canvas_api_token') &&
+    isSameCampus(getCampusForEmail(rawCanvasConnection.schoolEmail), userCampus);
+  const canvasConnection: CanvasUserConnection = canvasMatchesCampus
+    ? rawCanvasConnection
+    : {
+        isConnected: false,
+        schoolEmail: '',
+        institutionName: userCampus?.name || '',
+        institutionDomain: '',
+        source: 'domain_simulation',
+        courses: [],
+      };
   const [isCanvasModalOpen, setIsCanvasModalOpen] = useState(false);
   const [selectedCanvasCourseId, setSelectedCanvasCourseId] = useState<string>('all');
 
@@ -440,6 +519,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser]);
 
   useEffect(() => {
+    saveToStorage('appMode', appMode);
+  }, [appMode]);
+
+  useEffect(() => {
+    saveToStorage('classProjects', classProjects);
+  }, [classProjects]);
+
+  useEffect(() => {
+    saveToStorage('isSignedIn', isSignedIn);
+  }, [isSignedIn]);
+
+  useEffect(() => {
+    saveToStorage('localAccounts', localAccounts);
+  }, [localAccounts]);
+
+  useEffect(() => {
+    saveToStorage('hasChosenMode', hasChosenMode);
+  }, [hasChosenMode]);
+
+  // Drop back to Discover when the signed-in account can't use Campus mode
+  useEffect(() => {
+    if (appMode === 'campus' && !canAccessCampus) {
+      setAppModeState('discover');
+      setActiveViewState('discover');
+    }
+  }, [appMode, canAccessCampus]);
+
+  useEffect(() => {
     saveToStorage('projects', projects);
   }, [projects]);
 
@@ -495,6 +602,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveToStorage('teammateRatings', teammateRatings);
   }, [teammateRatings]);
 
+  const campusLockedMessage = 'Campus mode is only available to accounts with a .edu school email.';
+
+  const setAppMode = (mode: AppMode) => {
+    if (mode === 'campus' && !canAccessCampus) {
+      showToast(campusLockedMessage, 'warning');
+      return;
+    }
+    setAppModeState(mode);
+    setHasChosenMode(true);
+    setActiveViewState(mode === 'campus' ? 'campus-hub' : 'discover');
+  };
+
+  // Navigating to a mode-specific view switches into that mode (Campus requires a .edu account)
+  const setActiveView = (view: ViewType) => {
+    if (CAMPUS_VIEWS.includes(view)) {
+      if (!canAccessCampus) {
+        showToast(campusLockedMessage, 'warning');
+        return;
+      }
+      setAppModeState('campus');
+    } else if (DISCOVER_VIEWS.includes(view)) {
+      setAppModeState('discover');
+    }
+    setActiveViewState(view);
+  };
+
   const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'success') => {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, type, message }]);
@@ -512,9 +645,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = ALL_DEMO_ACCOUNTS.find((u) => u.id === userId);
     if (target) {
       setCurrentUser(target);
+      setIsSignedIn(true);
       setUserRepos([]);
       showToast(`Switched profile to: ${target.name} (${target.identities.join(', ')})`, 'info');
     }
+  };
+
+  // Email sign-in: reuses a matching demo or local account, otherwise creates one in this browser
+  const signInWithEmail = ({ email, name, identity }: { email: string; name: string; identity: UserIdentity }) => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) {
+      return { success: false, message: 'Please enter a valid email address.' };
+    }
+    const sameEmail = (a: Author) => (a.email || '').toLowerCase() === cleanEmail;
+    let account: Author | undefined = localAccounts.find(sameEmail) || ALL_DEMO_ACCOUNTS.find(sameEmail);
+
+    if (!account) {
+      const cleanName = name.trim();
+      if (!cleanName) {
+        return { success: false, message: 'Please enter your name to create your account.' };
+      }
+      const campus = getCampusForEmail(cleanEmail);
+      const isTeacher = identity === 'Teacher / Professor';
+      account = {
+        id: `user_local_${Date.now()}`,
+        name: cleanName,
+        email: cleanEmail,
+        avatar: initialsAvatar(cleanName),
+        bio: '',
+        identities: [identity],
+        school: campus && !isTeacher ? campus.name : undefined,
+        organization: campus && isTeacher ? campus.name : undefined,
+        skills: [],
+        githubConnected: false,
+      };
+      const created = account;
+      setLocalAccounts((prev) => [...prev, created]);
+    }
+
+    const signedIn: Author = account;
+    setCurrentUser(signedIn);
+    setUserRepos([]);
+    setIsSignedIn(true);
+    setHasChosenMode(false);
+    showToast(`Signed in as ${signedIn.name}`, 'success');
+    return { success: true, message: '' };
+  };
+
+  const signOut = () => {
+    setIsSignedIn(false);
+    setHasChosenMode(false);
+    setAppModeState('discover');
+    setActiveViewState('discover');
+    setUserRepos([]);
+    showToast('Signed out', 'info');
   };
 
   // Reset Demo Data
@@ -1048,14 +1232,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loginAsTeacher = () => {
     setCurrentUser(DEMO_TEACHER);
-    setActiveView('teacher-dashboard');
+    setIsSignedIn(true);
+    setAppModeState('campus');
+    setActiveViewState('teacher-dashboard');
+    setHasChosenMode(true);
     showToast(`Logged in as ${DEMO_TEACHER.name} (Teacher / Professor)`, 'success');
   };
 
   const loginAsStudent = (studentId = 'user_alex_chen') => {
     const student = ALL_DEMO_ACCOUNTS.find((a) => a.id === studentId) || DEMO_STUDENTS[0];
     setCurrentUser(student);
-    setActiveView('campus-hub');
+    setIsSignedIn(true);
+    const studentCampus = getCampusForEmail(student.email);
+    setAppModeState(studentCampus ? 'campus' : 'discover');
+    setHasChosenMode(true);
+    setActiveViewState(studentCampus ? 'campus-hub' : 'discover');
     showToast(`Logged in as ${student.name} (Student)`, 'info');
   };
 
@@ -1103,10 +1294,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     apiToken?: string,
     customDomain?: string
   ): Promise<{ success: boolean; message: string }> => {
+    if (!userCampus) {
+      showToast(campusLockedMessage, 'warning');
+      return { success: false, message: campusLockedMessage };
+    }
+    const emailCampus = getCampusForEmail(email);
+    if (emailCampus && !isSameCampus(emailCampus, userCampus)) {
+      const msg = `You can only connect Canvas for your own campus (${userCampus.name}).`;
+      showToast(msg, 'warning');
+      return { success: false, message: msg };
+    }
     setIsCanvasConnecting(true);
     try {
-      const res = await connectCanvasBySchoolEmail(email, apiToken, customDomain);
-      setCanvasConnection(res.connection);
+      const res = await connectCanvasBySchoolEmail(email, apiToken, customDomain, isDemoAccount);
+      const owned = { ...res.connection, ownerEmail: accountEmail.toLowerCase() };
+      saveCanvasConnection(owned);
+      setCanvasConnection(owned);
+      setCanvasApiToken(apiToken?.trim() || undefined);
       setIsCanvasConnecting(false);
       showToast(res.message, 'success');
       return { success: true, message: res.message };
@@ -1121,6 +1325,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const disconnectCanvas = () => {
     const cleared = clearCanvasConnection();
     setCanvasConnection(cleared);
+    setCanvasApiToken(undefined);
     showToast('Canvas LMS disconnected', 'info');
   };
 
@@ -1128,6 +1333,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeCanvasModal = () => setIsCanvasModalOpen(false);
 
   const allCanvasClassmates = getAllClassmates(canvasConnection.courses || []);
+
+  const loadCanvasAssignments = async (courseId: string) => {
+    const course = canvasConnection.courses.find((c) => c.id === courseId);
+    if (!canvasConnection.isConnected || !course) {
+      return { assignments: [] as CanvasAssignment[], source: 'directory' as const };
+    }
+    return fetchCanvasAssignments(canvasConnection, course, canvasApiToken);
+  };
+
+  // Campus-scoped coursework: only projects and assignments from the user's own school
+  const campusClassProjects = classProjects.filter(
+    (p) =>
+      (p.school || '').toLowerCase() === (userCampus?.name || '').toLowerCase() ||
+      authorBelongsToCampus(p.author, userCampus)
+  );
+  const campusClassAssignments = classAssignments.filter((a) => {
+    const teacher = ALL_DEMO_ACCOUNTS.find((acc) => acc.id === a.teacherId);
+    return teacher ? authorBelongsToCampus(teacher, userCampus) : a.teacherId === currentUser.id;
+  });
   const classmatesLookingForTeam = allCanvasClassmates.filter((c) => c.lookingForTeam);
 
   // Modal handlers
@@ -1374,7 +1598,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     projectData: Omit<Project, 'id' | 'createdAt' | 'viewCount' | 'interestCount' | 'author' | 'teamMembers'> & {
       teamMembers?: TeamMember[];
       attachedFiles?: ProjectAttachedFile[];
-    }
+    },
+    options?: { campusHub?: boolean }
   ) => {
     const authorContributionDesc =
       projectData.teamMembers?.find((m) => m.id === currentUser.id)?.contributionDescription;
@@ -1412,6 +1637,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { id: `m-${Date.now() + 1}`, projectId: `proj-${Date.now()}`, title: 'First Working Prototype', targetDate: '2026-12-01', completed: false },
       ],
     };
+
+    if (options?.campusHub && userCampus) {
+      const classProject: Project = { ...newProject, hubType: 'campus', school: userCampus.name };
+      setClassProjects((prev) => [classProject, ...prev]);
+      showToast(`"${classProject.title}" was added to ${userCampus.name} Campus Hub`, 'success');
+      return classProject;
+    }
 
     setProjects((prev) => [newProject, ...prev]);
     showToast(`"${newProject.title}" is now published to collabr!`, 'success');
@@ -1817,12 +2049,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         allDemoAccounts: ALL_DEMO_ACCOUNTS,
         switchUser,
+        isSignedIn,
+        signInWithEmail,
+        signOut,
         userRepos,
         isGitHubConnecting,
         connectGitHub,
         disconnectGitHub,
+        appMode,
+        setAppMode,
+        hasChosenMode,
+        userCampus,
+        canAccessCampus,
+        campusClassProjects,
+        campusClassAssignments,
         // Canvas LMS & School Email Integration
         canvasConnection,
+        isDemoAccount,
         isCanvasConnecting,
         connectCanvas,
         disconnectCanvas,
@@ -1833,6 +2076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedCanvasCourseId,
         allCanvasClassmates,
         classmatesLookingForTeam,
+        loadCanvasAssignments,
         projects,
         workProjects,
         classProjects,

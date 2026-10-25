@@ -20,6 +20,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { authorBelongsToCampus } from '../services/campusAccess';
 import { Author } from '../types';
 
 export const TeammateMatchingView: React.FC = () => {
@@ -36,11 +37,17 @@ export const TeammateMatchingView: React.FC = () => {
     openCanvasModal,
     allCanvasClassmates,
     setActiveView,
+    appMode,
+    userCampus,
   } = useApp();
 
-  // Filter candidate profiles: exclude current user and teachers
+  // Filter candidate profiles: exclude current user and teachers.
+  // Campus mode only matches people from the user's own school.
   const candidates = allDemoAccounts.filter(
-    (a) => a.id !== currentUser.id && !a.identities.includes('Teacher / Professor')
+    (a) =>
+      a.id !== currentUser.id &&
+      !a.identities.includes('Teacher / Professor') &&
+      (appMode !== 'campus' || authorBelongsToCampus(a, userCampus))
   );
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -172,6 +179,7 @@ export const TeammateMatchingView: React.FC = () => {
           >
             Professionals
           </button>
+          {appMode === 'campus' && (
           <button
             onClick={() => {
               if (!canvasConnection.isConnected) {
@@ -190,6 +198,7 @@ export const TeammateMatchingView: React.FC = () => {
             <GraduationCap className="w-3.5 h-3.5" />
             <span>Canvas Classmates</span>
           </button>
+          )}
         </div>
       </div>
 

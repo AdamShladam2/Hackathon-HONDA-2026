@@ -18,6 +18,7 @@ export const DEMO_PROFESSIONALS: Author[] = [
   {
     id: 'user_sarah_lin',
     name: 'Sarah Lin',
+    email: 'sarah.lin@omnineural.ai',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&auto=format&fit=crop&q=80',
     bio: 'Principal AI Engineer with 8 years building distributed model inference pipelines and autonomous agent frameworks.',
     identities: ['Working professional', 'Industry mentor'],
@@ -40,6 +41,7 @@ export const DEMO_PROFESSIONALS: Author[] = [
   {
     id: 'user_david_park',
     name: 'David Park',
+    email: 'david.park@scalegrid.io',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
     bio: 'Staff Cloud Infrastructure Architect specializing in Kubernetes operators, eBPF network observability, and multi-region resilience.',
     identities: ['Working professional'],
@@ -62,6 +64,7 @@ export const DEMO_PROFESSIONALS: Author[] = [
   {
     id: 'user_elena_rostova',
     name: 'Elena Rostova',
+    email: 'elena@formastudio.design',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=160&auto=format&fit=crop&q=80',
     bio: 'Product Design Systems Lead obsessed with high-density ergonomic design, WCAG AAA accessibility, and design tokens.',
     identities: ['Working professional', 'Industry mentor'],
@@ -84,6 +87,7 @@ export const DEMO_PROFESSIONALS: Author[] = [
   {
     id: 'user_marcus_thorne',
     name: 'Marcus Thorne',
+    email: 'marcus.thorne@vanguardshield.com',
     avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=160&auto=format&fit=crop&q=80',
     bio: 'Head of Threat Modeling & Application Security. Veteran of enterprise penetration testing and zero-knowledge protocols.',
     identities: ['Working professional'],
@@ -106,6 +110,7 @@ export const DEMO_PROFESSIONALS: Author[] = [
   {
     id: 'user_amara_okafor',
     name: 'Amara Okafor',
+    email: 'amara.okafor@medivance.health',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
     bio: 'VP of Health Informatics Strategy bridging clinical outcomes and secure FHIR data pipelines. Former hospital medical physicist.',
     identities: ['Working professional'],
@@ -132,6 +137,7 @@ export const DEMO_INDEPENDENTS: Author[] = [
   {
     id: 'user_devon_miller',
     name: 'Devon Miller',
+    email: 'devon.miller.dev@gmail.com',
     avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=160&auto=format&fit=crop&q=80',
     bio: 'Recent Graduate (UMich EECS). Building high-performance audio synthesis engines and DSP pipelines in WebAssembly AudioWorklet.',
     identities: ['Recent graduate', 'Independent creator / developer'],
@@ -158,6 +164,7 @@ export const DEMO_INDEPENDENTS: Author[] = [
   {
     id: 'user_kai_tanaka',
     name: 'Kai Tanaka',
+    email: 'kai@kaitanaka.dev',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
     bio: 'Independent full-stack builder & open source maintainer. Building developer analytics and privacy-first financial visualization tools.',
     identities: ['Independent creator / developer'],
@@ -179,6 +186,7 @@ export const DEMO_INDEPENDENTS: Author[] = [
   {
     id: 'user_siddharth_rao',
     name: 'Siddharth Rao',
+    email: 'sid.rao.builds@gmail.com',
     avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=160&auto=format&fit=crop&q=80',
     bio: 'Recent Master’s graduate in Computational Data Science. Passionate about knowledge graph construction and semantic retrieval.',
     identities: ['Recent graduate', 'Independent creator / developer'],
@@ -207,6 +215,7 @@ export const DEMO_MENTORS: Author[] = [
   {
     id: 'user_dr_evelyn_vance',
     name: 'Dr. Evelyn Vance',
+    email: 'evelyn.vance@apexdynamics.com',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&auto=format&fit=crop&q=80',
     bio: 'Director of Autonomous Systems at Apex Robotics with 14 years industry experience. Former NASA JPL contractor. Devoted to coaching students on ROS2, sensor fusion, and systems engineering.',
     identities: ['Industry mentor', 'Working professional'],
@@ -229,6 +238,7 @@ export const DEMO_MENTORS: Author[] = [
   {
     id: 'user_rachel_sterling',
     name: 'Rachel Sterling',
+    email: 'rachel.sterling@biocompute.com',
     avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=160&auto=format&fit=crop&q=80',
     bio: 'Staff Bioinformatics Systems Architect at BioCompute. Mentoring early-career women and underrepresented engineers in scalable computational genomics and data integrity.',
     identities: ['Industry mentor', 'Working professional'],
@@ -251,6 +261,7 @@ export const DEMO_MENTORS: Author[] = [
   {
     id: 'user_carlos_mendez',
     name: 'Carlos Mendez',
+    email: 'carlos@greenstack.org',
     avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=160&auto=format&fit=crop&q=80',
     bio: 'Founder and IoT hardware fellow at GreenStack IoT. Passionate about guiding student and early-career innovators in building rugged clean-energy prototypes.',
     identities: ['Industry mentor', 'Independent creator / developer'],
@@ -277,6 +288,7 @@ export const DEMO_STUDENTS: Author[] = [
   {
     id: 'user_alex_chen',
     name: 'Alex Chen',
+    email: 'alexchen@buckeyemail.osu.edu',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
     school: 'Ohio State University',
     major: 'Computer Science & Engineering',
@@ -300,6 +312,7 @@ export const DEMO_STUDENTS: Author[] = [
   {
     id: 'user_maya_lin',
     name: 'Maya Lin',
+    email: 'mayalin@purdue.edu',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&auto=format&fit=crop&q=80',
     school: 'Purdue University',
     major: 'Human-Centered Design & Computer Graphics',

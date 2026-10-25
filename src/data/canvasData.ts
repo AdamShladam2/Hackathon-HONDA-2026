@@ -1,4 +1,4 @@
-import { CanvasCourse, CanvasClassmate, CanvasUserConnection } from '../types';
+import { CanvasCourse, CanvasClassmate, CanvasUserConnection, CanvasAssignment } from '../types';
 
 export interface InstitutionMeta {
   domain: string;
@@ -779,3 +779,79 @@ export function generateCoursesForSchool(
     },
   ];
 }
+
+// ==========================================
+// CANVAS ASSIGNMENTS & SUBMITTED FILES (university directory fallback)
+// ==========================================
+// Used when no live Canvas API token is available. File links point at the
+// student's submission page for that assignment in Canvas.
+function osuAssignment(
+  courseId: string,
+  courseCode: string,
+  canvasCourseNumber: number,
+  assignmentNumber: number,
+  name: string,
+  dueAt: string,
+  pointsPossible: number,
+  submissionStatus: CanvasAssignment['submissionStatus'],
+  files: { name: string; sizeBytes: number; contentType: string }[]
+): CanvasAssignment {
+  const htmlUrl = `https://osu.instructure.com/courses/${canvasCourseNumber}/assignments/${assignmentNumber}`;
+  return {
+    id: `canvas-asg-${assignmentNumber}`,
+    courseId,
+    courseCode,
+    name,
+    dueAt,
+    pointsPossible,
+    htmlUrl,
+    submissionStatus,
+    submittedFiles: files.map((f, i) => ({
+      id: `canvas-file-${assignmentNumber}-${i + 1}`,
+      displayName: f.name,
+      sizeBytes: f.sizeBytes,
+      contentType: f.contentType,
+      url: `${htmlUrl}/submissions/self`,
+    })),
+  };
+}
+
+const PDF = 'application/pdf';
+const ZIP = 'application/zip';
+
+export const OSU_CANVAS_ASSIGNMENTS: Record<string, CanvasAssignment[]> = {
+  'course-cse-3901': [
+    osuAssignment('course-cse-3901', 'CSE 3901', 104921, 2210451, 'Project 1: Static Site & Responsive Layout', '2026-09-19T23:59:00-04:00', 50, 'graded', [
+      { name: 'project1_responsive_site.zip', sizeBytes: 1_843_200, contentType: ZIP },
+      { name: 'project1_design_notes.pdf', sizeBytes: 412_000, contentType: PDF },
+    ]),
+    osuAssignment('course-cse-3901', 'CSE 3901', 104921, 2210467, 'Project 2: Rails CRUD Application', '2026-10-17T23:59:00-04:00', 100, 'submitted', [
+      { name: 'project2_rails_app.zip', sizeBytes: 5_242_880, contentType: ZIP },
+      { name: 'project2_er_diagram.png', sizeBytes: 286_720, contentType: 'image/png' },
+      { name: 'project2_team_report.pdf', sizeBytes: 734_003, contentType: PDF },
+    ]),
+    osuAssignment('course-cse-3901', 'CSE 3901', 104921, 2210482, 'Final Project: Lab Inventory System', '2026-11-20T23:59:00-05:00', 150, 'unsubmitted', []),
+  ],
+  'course-cse-5521': [
+    osuAssignment('course-cse-5521', 'CSE 5521', 106318, 2234110, 'Homework 2: Search & Heuristics', '2026-09-26T23:59:00-04:00', 40, 'graded', [
+      { name: 'hw2_astar_search.py', sizeBytes: 18_432, contentType: 'text/x-python' },
+      { name: 'hw2_writeup.pdf', sizeBytes: 503_808, contentType: PDF },
+    ]),
+    osuAssignment('course-cse-5521', 'CSE 5521', 106318, 2234126, 'Project 3: Inverse Kinematics Solver', '2026-10-31T23:59:00-04:00', 100, 'pending_review', [
+      { name: 'ik_solver_source.zip', sizeBytes: 2_621_440, contentType: ZIP },
+      { name: 'ik_solver_benchmarks.csv', sizeBytes: 64_512, contentType: 'text/csv' },
+    ]),
+  ],
+  'course-ece-5020': [
+    osuAssignment('course-ece-5020', 'ECE 5020', 108902, 2251877, 'Lab 4: ADC Sampling & Signal Conditioning', '2026-10-10T23:59:00-04:00', 30, 'graded', [
+      { name: 'lab4_adc_report.pdf', sizeBytes: 1_153_434, contentType: PDF },
+      { name: 'lab4_scope_captures.zip', sizeBytes: 3_984_588, contentType: ZIP },
+    ]),
+  ],
+  'course-engr-1181': [
+    osuAssignment('course-engr-1181', 'ENGR 1181', 102140, 2198304, 'Rover Design Review Deck', '2026-10-24T23:59:00-04:00', 25, 'submitted', [
+      { name: 'rover_design_review.pptx', sizeBytes: 6_501_171, contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
+    ]),
+    osuAssignment('course-engr-1181', 'ENGR 1181', 102140, 2198319, 'Chassis CAD Model', '2026-11-07T23:59:00-05:00', 40, 'unsubmitted', []),
+  ],
+};

@@ -27,8 +27,9 @@ import { EvidenceType } from '../types';
 
 export const SchoolSectionView: React.FC = () => {
   const {
-    classProjects,
-    classAssignments,
+    campusClassProjects: classProjects,
+    campusClassAssignments: classAssignments,
+    userCampus,
     openShareModal,
     setSelectedProject,
     setActiveView,
@@ -53,6 +54,20 @@ export const SchoolSectionView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [courseFilter, setCourseFilter] = useState('all');
   const [professorFilter, setProfessorFilter] = useState('all');
+
+  // Course & professor options come from this campus's own coursework
+  const campusCourses = Array.from(
+    new Set([
+      ...classAssignments.map((a) => a.classCode),
+      ...classProjects.map((p) => p.courseCode).filter(Boolean),
+    ])
+  ) as string[];
+  const campusProfessors = Array.from(
+    new Set([
+      ...classAssignments.map((a) => a.teacherName),
+      ...classProjects.map((p) => p.professorName).filter(Boolean),
+    ])
+  ) as string[];
 
   // Filter assignments
   const filteredAssignments = classAssignments.filter((assign) => {
@@ -117,7 +132,7 @@ export const SchoolSectionView: React.FC = () => {
         <div className="relative z-10 max-w-3xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-950/80 border border-red-800/80 text-red-300 text-xs font-semibold uppercase tracking-wider">
             <GraduationCap className="w-4 h-4 text-red-400" />
-            <span>Ohio State University · College of Engineering (CSE)</span>
+            <span>{userCampus?.name}</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -238,10 +253,9 @@ export const SchoolSectionView: React.FC = () => {
               className="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-medium"
             >
               <option value="all">All Courses</option>
-              <option value="CSE 3901">CSE 3901</option>
-              <option value="CSE 5521">CSE 5521</option>
-              <option value="ECE 5020">ECE 5020</option>
-              <option value="ENGR 1181">ENGR 1181</option>
+              {campusCourses.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
 
             <select
@@ -250,10 +264,9 @@ export const SchoolSectionView: React.FC = () => {
               className="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-medium"
             >
               <option value="all">All Professors</option>
-              <option value="Dr. Rajiv Ramnath">Dr. Rajiv Ramnath</option>
-              <option value="Dr. Evelyn Vance">Dr. Evelyn Vance</option>
-              <option value="Dr. Sarah Lin">Dr. Sarah Lin</option>
-              <option value="Prof. Robert Hayes">Prof. Robert Hayes</option>
+              {campusProfessors.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
             </select>
 
             {(searchQuery || courseFilter !== 'all' || professorFilter !== 'all') && (
@@ -275,7 +288,7 @@ export const SchoolSectionView: React.FC = () => {
         {/* Quick Course Selector Pills */}
         <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 flex-wrap text-xs">
           <span className="text-[11px] font-semibold text-slate-500">Quick Courses:</span>
-          {['CSE 3901', 'CSE 5521', 'ENGR 1181'].map((c) => (
+          {campusCourses.slice(0, 3).map((c) => (
             <button
               key={c}
               type="button"
@@ -291,7 +304,7 @@ export const SchoolSectionView: React.FC = () => {
           ))}
           <span className="text-slate-300 mx-1">·</span>
           <span className="text-[11px] font-semibold text-slate-500">Professors:</span>
-          {['Dr. Rajiv Ramnath', 'Dr. Evelyn Vance'].map((p) => (
+          {campusProfessors.slice(0, 2).map((p) => (
             <button
               key={p}
               type="button"
@@ -430,7 +443,7 @@ export const SchoolSectionView: React.FC = () => {
           <h2 className="text-base font-bold text-slate-900">
             Student Coursework Submissions ({filteredClassProjects.length})
           </h2>
-          <span className="text-xs text-slate-400">Ohio State CSE Dept</span>
+          <span className="text-xs text-slate-400">{userCampus?.name}</span>
         </div>
 
         <div className="grid grid-cols-1 gap-4">

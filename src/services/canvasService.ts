@@ -1,10 +1,12 @@
-import { CanvasCourse, CanvasClassmate, CanvasUserConnection } from '../types';
+import { CanvasCourse, CanvasClassmate, CanvasUserConnection, CanvasAssignment } from '../types';
 import {
   resolveInstitutionFromEmail,
   generateCoursesForSchool,
   INITIAL_OSU_COURSES,
   InstitutionMeta,
+  OSU_CANVAS_ASSIGNMENTS,
 } from '../data/canvasData';
+import { isEduEmail } from './campusAccess';
 
 const CANVAS_STORAGE_KEY = 'skillsink_canvas_connection_v1';
 
@@ -58,71 +60,102 @@ export function clearCanvasConnection(): CanvasUserConnection {
   };
 }
 
+// Canvas blocks browser cross-origin calls, so requests go through the dev server's
+// /canvas-proxy route (see vite.config.ts), which forwards them to the Canvas host.
+function canvasProxyUrl(domain: string, apiPath: string): string {
+  return `/canvas-proxy/${domain.replace(/^https?:\/\//, '').replace(/\/+$/, '')}${apiPath}`;
+}
+
+// GETs every page of a Canvas list endpoint (Canvas paginates with a Link header)
+async function canvasGetAll(domain: string, apiPath: string, apiToken: string): Promise<any[]> {
+  const results: any[] = [];
+  let url: string | null = canvasProxyUrl(domain, apiPath);
+  for (let page = 0; url && page < 20; page++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        signal: controller.signal,
+        headers: { Authorization: `Bearer ${apiToken}`, Accept: 'application/json' },
+      });
+    } catch {
+      throw new Error(`Could not reach Canvas at ${domain}. Make sure the app is running with npm run dev.`);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    if (res.status === 401) {
+      throw new Error('Canvas rejected that access token. Check that it was copied correctly and has not expired.');
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error || `Canvas request failed (${res.status}) at ${domain}.`);
+    }
+    const data = await res.json();
+    if (Array.isArray(data)) results.push(...data);
+    const next = res.headers.get('X-Canvas-Link')?.match(/<https?:\/\/([^/>]+)(\/[^>]*)>;\s*rel="next"/);
+    url = next ? `/canvas-proxy/${next[1]}${next[2]}` : null;
+  }
+  return results;
+}
+
 export async function connectCanvasBySchoolEmail(
   email: string,
   apiToken?: string,
-  customDomain?: string
+  customDomain?: string,
+  // Demo accounts may use the built-in sample courses; real accounts need a Canvas token
+  allowSampleCourses = false
 ): Promise<{ success: boolean; connection: CanvasUserConnection; message: string }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail || !cleanEmail.includes('@')) {
     throw new Error('Please enter a valid school email address (e.g. yourname@osu.edu).');
   }
+  if (!isEduEmail(cleanEmail)) {
+    throw new Error('Canvas and Campus mode require a .edu school email address.');
+  }
 
   const institution = resolveInstitutionFromEmail(cleanEmail);
-  const domain = customDomain?.trim() || institution.canvasUrl.replace(/^https?:\/\//, '');
+  const domain = (customDomain?.trim() || institution.canvasUrl)
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .toLowerCase();
 
   let courses: CanvasCourse[] = [];
   let source: CanvasUserConnection['source'] = 'verified_sso';
+  const token = apiToken?.trim();
 
-  // If user provided a live Canvas API token, attempt to query the Canvas REST API
-  if (apiToken && apiToken.trim().length > 10) {
-    try {
-      source = 'canvas_api_token';
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-      const targetApiUrl = `https://${domain}/api/v1/courses?enrollment_state=active&include[]=teachers&include[]=total_students`;
-      const res = await fetch(targetApiUrl, {
-        signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${apiToken.trim()}`,
-          Accept: 'application/json',
+  if (token) {
+    // Live Canvas: the student's real active enrollments
+    source = 'canvas_api_token';
+    const liveCourses = await canvasGetAll(
+      domain,
+      '/api/v1/courses?enrollment_state=active&include[]=teachers&include[]=total_students&include[]=term&per_page=100',
+      token
+    );
+    courses = liveCourses
+      .filter((c: any) => c && c.id && !c.access_restricted_by_date)
+      .map((c: any, idx: number) => ({
+        id: `course-${c.id}`,
+        courseCode: c.course_code || c.name || `Course ${idx + 1}`,
+        name: c.name || c.course_code || 'Enrolled Course',
+        term: c.term?.name || '',
+        department: institution.name,
+        section: c.sis_course_id || '',
+        canvasUrl: `https://${domain}/courses/${c.id}`,
+        instructor: {
+          id: `inst-${c.teachers?.[0]?.id || idx}`,
+          name: c.teachers?.[0]?.display_name || 'Course Instructor',
+          email: '',
+          avatar: c.teachers?.[0]?.avatar_image_url || '',
         },
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const liveCourses = await res.json();
-        if (Array.isArray(liveCourses) && liveCourses.length > 0) {
-          courses = liveCourses.map((c: any, idx: number) => ({
-            id: `course-${c.id || idx}`,
-            courseCode: c.course_code || `COURSE ${100 + idx}`,
-            name: c.name || 'Enrolled Course',
-            term: c.term?.name || 'Current Term 2026',
-            department: institution.name,
-            section: 'Live Section',
-            canvasUrl: `https://${domain}/courses/${c.id}`,
-            instructor: {
-              id: `inst-${idx}`,
-              name: c.teachers?.[0]?.display_name || 'Course Instructor',
-              email: `instructor@${institution.domain}`,
-              avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&auto=format&fit=crop&q=80',
-            },
-            studentCount: c.total_students || 24,
-            lookingForTeamCount: 5,
-            classmates: [],
-          }));
-        }
-      }
-    } catch (apiErr) {
-      console.warn('Canvas live API connection fallback to university directory:', apiErr);
-      source = 'verified_sso';
-    }
-  }
-
-  // Fallback to domain-grounded courses and realistic classmates
-  if (courses.length === 0) {
+        studentCount: c.total_students || 0,
+        lookingForTeamCount: 0,
+        classmates: [],
+      }));
+  } else if (allowSampleCourses) {
     courses = generateCoursesForSchool(cleanEmail, institution);
+  } else {
+    throw new Error('Paste a Canvas access token to load your real classes.');
   }
 
   const newConnection: CanvasUserConnection = {
@@ -157,4 +190,57 @@ export function getAllClassmates(courses: CanvasCourse[]): CanvasClassmate[] {
     });
   });
   return Array.from(map.values());
+}
+
+// Lists the student's assignments for a course along with the files they submitted.
+// Uses the live Canvas REST API when an API token is available, otherwise the
+// university directory data for that course.
+export async function fetchCanvasAssignments(
+  connection: CanvasUserConnection,
+  course: CanvasCourse,
+  apiToken?: string
+): Promise<{ assignments: CanvasAssignment[]; source: 'canvas_api' | 'directory' }> {
+  const canvasCourseNumber = course.canvasUrl.match(/\/courses\/(\d+)/)?.[1];
+
+  if (apiToken && canvasCourseNumber && connection.institutionDomain) {
+    const live = await canvasGetAll(
+      connection.institutionDomain,
+      `/api/v1/courses/${canvasCourseNumber}/assignments?include[]=submission&per_page=100`,
+      apiToken
+    );
+    return {
+      source: 'canvas_api',
+      assignments: live.map((a: any) => ({
+        id: `canvas-asg-${a.id}`,
+        courseId: course.id,
+        courseCode: course.courseCode,
+        name: a.name,
+        dueAt: a.due_at || undefined,
+        pointsPossible: a.points_possible ?? undefined,
+        htmlUrl: a.html_url,
+        submissionStatus:
+          a.submission?.workflow_state === 'graded'
+            ? 'graded'
+            : a.submission?.workflow_state === 'pending_review'
+            ? 'pending_review'
+            : a.submission?.submitted_at
+            ? 'submitted'
+            : 'unsubmitted',
+        submittedFiles: (a.submission?.attachments || []).map((f: any) => ({
+          id: `canvas-file-${f.id}`,
+          displayName: f.display_name || f.filename,
+          sizeBytes: f.size || 0,
+          contentType: f['content-type'] || f.content_type || '',
+          url: f.url || a.html_url,
+        })),
+      })),
+    };
+  }
+
+  // Real Canvas connections need the token again after a page reload (it is never saved)
+  if (connection.source === 'canvas_api_token') {
+    throw new Error('Reconnect Canvas with your access token to load assignments.');
+  }
+
+  return { source: 'directory', assignments: OSU_CANVAS_ASSIGNMENTS[course.id] || [] };
 }

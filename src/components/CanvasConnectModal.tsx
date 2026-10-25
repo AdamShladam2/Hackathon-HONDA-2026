@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { resolveInstitutionFromEmail, KNOWN_INSTITUTIONS } from '../data/canvasData';
+import { isEduEmail } from '../services/campusAccess';
 
 interface CanvasConnectModalProps {
   onClose: () => void;
@@ -29,36 +30,41 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
     isCanvasConnecting,
     currentUser,
     setActiveView,
+    isDemoAccount,
   } = useApp();
 
   const [email, setEmail] = useState('');
   const [apiToken, setApiToken] = useState('');
   const [customDomain, setCustomDomain] = useState('');
-  const [authMode, setAuthMode] = useState<'sso' | 'token'>('sso');
+  const [authMode, setAuthMode] = useState<'sso' | 'token'>(isDemoAccount ? 'sso' : 'token');
+  const [connectError, setConnectError] = useState('');
   const [showTokenHelp, setShowTokenHelp] = useState(false);
 
   // Initialize with current user email or connection email
   useEffect(() => {
     if (canvasConnection.isConnected && canvasConnection.schoolEmail) {
       setEmail(canvasConnection.schoolEmail);
-    } else if (currentUser.school?.toLowerCase().includes('ohio')) {
-      setEmail('alexchen@buckeyemail.osu.edu');
-    } else if (currentUser.school?.toLowerCase().includes('purdue')) {
-      setEmail('jordanlee@purdue.edu');
-    } else if (currentUser.school?.toLowerCase().includes('michigan')) {
-      setEmail('priyapatel@umich.edu');
+    } else if (isEduEmail(currentUser.email)) {
+      // Canvas can only be linked for the account's own campus
+      setEmail(currentUser.email || '');
     } else {
-      setEmail('alexchen@buckeyemail.osu.edu');
+      setEmail('');
     }
   }, [canvasConnection, currentUser]);
 
   const detectedInstitution = resolveInstitutionFromEmail(email || 'student@osu.edu');
+  const detectedCanvasHost = detectedInstitution.canvasUrl.replace('https://', '');
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !email.includes('@')) {
       return;
     }
+    if (authMode === 'token' && !apiToken.trim()) {
+      setConnectError('Paste your Canvas access token to load your classes.');
+      return;
+    }
+    setConnectError('');
 
     const res = await connectCanvas(
       email.trim(),
@@ -69,6 +75,8 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
     if (res.success) {
       onClose();
       setActiveView('canvas-classes');
+    } else {
+      setConnectError(res.message);
     }
   };
 
@@ -179,6 +187,7 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
             </div>
 
             {/* Quick-Pick Demo School Accounts */}
+            {isDemoAccount && (
             <div>
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
                 Quick Select Sample University Email:
@@ -230,6 +239,7 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                 </button>
               </div>
             </div>
+            )}
 
             {/* Connection Mode Options */}
             <div className="pt-2 border-t border-slate-100">
@@ -237,6 +247,7 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Authentication Mode
                 </span>
+                {isDemoAccount && (
                 <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg text-[11px]">
                   <button
                     type="button"
@@ -247,7 +258,7 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
-                    Campus SSO (Fast)
+                    Sample classes (demo)
                   </button>
                   <button
                     type="button"
@@ -261,6 +272,7 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                     Canvas API Token
                   </button>
                 </div>
+                )}
               </div>
 
               {authMode === 'token' ? (
@@ -292,6 +304,18 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                     </div>
                   )}
 
+                  <label className="block font-semibold text-slate-700 pt-1">Canvas address</label>
+                  <input
+                    type="text"
+                    value={customDomain}
+                    onChange={(e) => setCustomDomain(e.target.value)}
+                    placeholder={detectedCanvasHost}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    Leave blank to use {detectedCanvasHost}. Use the address you see in your browser when you open Canvas (e.g. canvas.instructure.com for a personal Canvas account).
+                  </p>
+                  <label className="block font-semibold text-slate-700 pt-1">Access token</label>
                   <input
                     type="password"
                     value={apiToken}
@@ -322,6 +346,12 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                 <span>View peers in your course sections who are looking for project teammates</span>
               </p>
             </div>
+
+            {connectError && (
+              <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                {connectError}
+              </p>
+            )}
 
             {/* Submit Button */}
             <div className="pt-2 flex items-center justify-end gap-3">

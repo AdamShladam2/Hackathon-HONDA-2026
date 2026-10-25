@@ -18,6 +18,7 @@ import {
 export const DEMO_TEACHER: Author = {
   id: 'user_prof_robert_hayes',
   name: 'Prof. Robert Hayes',
+  email: 'hayes.1@osu.edu',
   avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=160&auto=format&fit=crop&q=80',
   bio: 'Professor of Computer Science & Engineering and Director of Undergraduate Systems Curriculum at Ohio State University. Focused on distributed systems, software engineering pedagogy, and authentic learning assessment.',
   identities: ['Teacher / Professor'],

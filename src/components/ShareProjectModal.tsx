@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Project, CodeAvailability, ProjectStatus, GitHubRepo, ProjectAttachedFile, TeamMember } from '../types';
 import { useApp } from '../context/AppContext';
+import { FileAttachmentInput } from './FileAttachmentInput';
 import {
   X,
   GitBranch,
@@ -48,6 +49,7 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
     showToast,
     canvasConnection,
     allCanvasClassmates,
+    appMode,
   } = useApp();
 
   // Form State
@@ -119,40 +121,8 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
 
   // Attached Files / Deliverables labeled to students
   const [attachedFiles, setAttachedFiles] = useState<ProjectAttachedFile[]>(
-    initialData?.attachedFiles && initialData.attachedFiles.length > 0
-      ? initialData.attachedFiles
-      : [
-          {
-            id: 'file-sample-1',
-            name: 'CSE3901_Final_Architecture_Specification.pdf',
-            size: '2.4 MB',
-            type: 'PDF Document',
-            url: '#',
-            labeledStudentId: currentUser.id,
-            labeledStudentName: currentUser.name,
-            description: 'System architecture diagram, data schema, and API contracts.',
-            uploadedAt: new Date().toISOString(),
-          },
-          {
-            id: 'file-sample-2',
-            name: 'Telemetry_Parser_Benchmark_Report.pdf',
-            size: '1.2 MB',
-            type: 'PDF Document',
-            url: '#',
-            labeledStudentId: 'user-teammate-2',
-            labeledStudentName: 'Jordan Taylor',
-            description: 'Load test results, latency graphs, and UI performance benchmarks.',
-            uploadedAt: new Date().toISOString(),
-          },
-        ]
+    initialData?.attachedFiles || []
   );
-
-  // New File Inputs
-  const [fileNameInput, setFileNameInput] = useState('');
-  const [fileTypeInput, setFileTypeInput] = useState('PDF Document');
-  const [fileSizeInput, setFileSizeInput] = useState('1.5 MB');
-  const [fileNoteInput, setFileNoteInput] = useState('');
-  const [fileStudentIdInput, setFileStudentIdInput] = useState(currentUser.id);
 
   // Media
   const [screenshotUrl, setScreenshotUrl] = useState('');
@@ -267,40 +237,6 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
   };
 
   // Add Attached File Labeled to a Student
-  const handleAddAttachedFile = () => {
-    if (!fileNameInput.trim()) {
-      showToast('Please enter the deliverable or file name.', 'warning');
-      return;
-    }
-
-    let labeledName = 'Whole Team Deliverable';
-    if (fileStudentIdInput !== 'team') {
-      const target = teamMembers.find((m) => m.id === fileStudentIdInput);
-      if (target) labeledName = target.name;
-    }
-
-    const newFile: ProjectAttachedFile = {
-      id: `file-${Date.now()}`,
-      name: fileNameInput.trim(),
-      type: fileTypeInput,
-      size: fileSizeInput || '1.5 MB',
-      url: '#',
-      labeledStudentId: fileStudentIdInput,
-      labeledStudentName: labeledName,
-      description: fileNoteInput.trim() || undefined,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    setAttachedFiles([...attachedFiles, newFile]);
-    setFileNameInput('');
-    setFileNoteInput('');
-    showToast(`Attached "${newFile.name}" attributed to ${labeledName}!`, 'success');
-  };
-
-  const handleRemoveFile = (fileId: string) => {
-    setAttachedFiles(attachedFiles.filter((f) => f.id !== fileId));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -373,6 +309,9 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
       professorName: professorName.trim() || undefined,
       attachedFiles,
       teamMembers: finalTeamMembers,
+    }, {
+      // New class projects created in Campus mode go to this campus's Campus Hub
+      campusHub: appMode === 'campus' && isClassProject && !initialData?.id,
     });
 
     onClose();
@@ -672,152 +611,18 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
               </span>
             </div>
 
-            {/* List of currently attached files */}
-            {attachedFiles.length > 0 ? (
-              <div className="space-y-2">
-                {attachedFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-2xs"
-                  >
-                    <div className="flex items-start gap-2.5 min-w-0">
-                      <div className="p-2 rounded-lg bg-blue-50 text-blue-600 shrink-0">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-bold text-slate-900 truncate">
-                            {file.name}
-                          </span>
-                          <span className="text-[10px] px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded font-mono">
-                            {file.type} · {file.size}
-                          </span>
-                        </div>
-                        {file.description && (
-                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                            {file.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-[10px] text-slate-400">Attributed to:</span>
-                          <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md inline-flex items-center gap-1">
-                            <UserCheck className="w-3 h-3 text-emerald-600" />
-                            {file.labeledStudentName || 'Team'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFile(file.id)}
-                      className="text-slate-400 hover:text-rose-600 p-1 self-end sm:self-center transition-colors cursor-pointer"
-                      title="Remove file"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500 italic">No files attached yet.</p>
-            )}
-
-            {/* Add File Form */}
-            <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3">
-              <span className="text-xs font-bold text-slate-900 block">
-                + Attach a New File or Deliverable
-              </span>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                    File / Deliverable Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={fileNameInput}
-                    onChange={(e) => setFileNameInput(e.target.value)}
-                    placeholder="e.g. CSE3901_Final_Report.pdf or Telemetry_Data.csv"
-                    className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                    File Type
-                  </label>
-                  <select
-                    value={fileTypeInput}
-                    onChange={(e) => setFileTypeInput(e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
-                  >
-                    <option value="PDF Document">PDF Document</option>
-                    <option value="Source Code Archive">Source Code Archive</option>
-                    <option value="Dataset / CSV">Dataset / CSV</option>
-                    <option value="Slide Deck / Presentation">Slide Deck / Presentation</option>
-                    <option value="CAD / 3D Model">CAD / 3D Model</option>
-                    <option value="Design Wireframes">Design Wireframes</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  {/* Labeled to student option */}
-                  <label className="block text-[11px] font-bold text-emerald-800 mb-0.5">
-                    Label File to Student (Attribution) *
-                  </label>
-                  <select
-                    value={fileStudentIdInput}
-                    onChange={(e) => setFileStudentIdInput(e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 bg-emerald-50/50 border border-emerald-300 rounded-lg text-emerald-950 font-medium"
-                  >
-                    <option value="team">Whole Team Deliverable</option>
-                    {teamMembers.map((member) => (
-                      <option key={member.id} value={member.id}>
-                        {member.name} {member.id === currentUser.id ? '(You)' : ''} — {member.role}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                    Estimated File Size
-                  </label>
-                  <input
-                    type="text"
-                    value={fileSizeInput}
-                    onChange={(e) => setFileSizeInput(e.target.value)}
-                    placeholder="e.g. 2.4 MB"
-                    className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                  File Summary / Note (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={fileNoteInput}
-                  onChange={(e) => setFileNoteInput(e.target.value)}
-                  placeholder="e.g. Authored hardware spec and battery thermal benchmark report."
-                  className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleAddAttachedFile}
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Attach File & Label to Student</span>
-              </button>
-            </div>
+            <FileAttachmentInput
+              files={attachedFiles}
+              onChange={setAttachedFiles}
+              attributionOptions={teamMembers.map((m) => ({
+                id: m.id,
+                name: m.name,
+                label: `${m.name}${m.id === currentUser.id ? ' (You)' : ''} — ${m.role}`,
+              }))}
+              defaultAttributionId={currentUser.id}
+              allowCanvasImport={appMode === 'campus'}
+              canvasCourseCode={courseCode}
+            />
           </div>
 
           {/* Section 5: Code Access Policy */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Project } from '../types';
 import { useApp } from '../context/AppContext';
+import { openAttachedFile } from '../services/fileStore';
 import {
   X,
   GitBranch,
@@ -390,11 +391,14 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
 
                       <button
                         type="button"
-                        onClick={() => showToast(`Opening "${file.name}" for preview`, 'info')}
+                        onClick={async () => {
+                          const opened = await openAttachedFile(file);
+                          if (!opened) showToast(`"${file.name}" has no stored copy to open.`, 'warning');
+                        }}
                         className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors cursor-pointer shrink-0"
                       >
                         <Download className="w-3 h-3" />
-                        <span>View File</span>
+                        <span>{file.source === 'canvas' ? 'Open in Canvas' : 'View File'}</span>
                       </button>
                     </div>
                   </div>

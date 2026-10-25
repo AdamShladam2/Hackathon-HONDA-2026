@@ -109,6 +109,7 @@ export interface Author {
   avatar: string;
   bio: string;
   identities: UserIdentity[];
+  email?: string; // Account email; a .edu address unlocks Campus mode for that school
 
   // Student specific
   school?: string;
@@ -279,6 +280,12 @@ export interface ProjectAttachedFile {
   labeledStudentName?: string;
   description?: string;
   uploadedAt: string;
+  // Real uploads are kept in the browser's IndexedDB under this key (see services/fileStore)
+  storageKey?: string;
+  mimeType?: string;
+  source?: 'upload' | 'canvas';
+  canvasCourseCode?: string;
+  canvasAssignmentName?: string;
 }
 
 export interface TeamMember {
@@ -507,6 +514,7 @@ export interface StudentSubmission {
   googleDocsUrl?: string; // Permitted Google Docs link
   supportingEvidenceUrls?: string[];
   individualContributionDesc: string; // What the student did
+  attachedFiles?: ProjectAttachedFile[]; // Uploaded or Canvas-imported files
   similarityChecked: boolean;
   similarityReport?: SimilarityReport;
   gradeStatus?: 'Ungraded' | 'Graded';
@@ -686,6 +694,26 @@ export interface CanvasCourse {
   classmates: CanvasClassmate[];
 }
 
+export interface CanvasSubmissionFile {
+  id: string;
+  displayName: string;
+  sizeBytes: number;
+  contentType: string;
+  url: string; // Canvas file / submission link
+}
+
+export interface CanvasAssignment {
+  id: string;
+  courseId: string;
+  courseCode: string;
+  name: string;
+  dueAt?: string;
+  pointsPossible?: number;
+  htmlUrl: string;
+  submissionStatus: 'submitted' | 'graded' | 'unsubmitted' | 'pending_review';
+  submittedFiles: CanvasSubmissionFile[];
+}
+
 export interface CanvasUserConnection {
   isConnected: boolean;
   schoolEmail: string;
@@ -695,5 +723,6 @@ export interface CanvasUserConnection {
   connectedAt?: string;
   source: 'verified_sso' | 'canvas_api_token' | 'domain_simulation';
   courses: CanvasCourse[];
+  ownerEmail?: string; // Account that linked Canvas; defaults to schoolEmail
 }
 
