@@ -1,0 +1,13 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/canvas-proxy/:path*", "destination": "/api/server" },
+    { "source": "/canvas-feed", "destination": "/api/server" },
+    { "source": "/api/integrity-summary", "destination": "/api/server" }
+  ],
+  "functions": {
+    "api/server.ts": { "maxDuration": 60 }
+  }
+}

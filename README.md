@@ -7,6 +7,8 @@ collabr helps students find teammates, show the work they did, and get credit fo
 
 Teachers get their own mode with their students, the posts in their classes, an integrity check and the opportunities they offer.
 
+**Live site:** https://getcollabr.vercel.app
+
 ## Getting started
 
 Requires Node.js 20 or newer.
@@ -34,7 +36,7 @@ The teacher Integrity Check can have Claude write its summaries. Copy `.env.exam
 ANTHROPIC_API_KEY=your-key
 ```
 
-The key is only read by the dev/preview server (`server/integritySummary.ts`) and never reaches the browser. Only the computed signals are sent to Claude, not the students' work. Without a key, the app shows a built-in summary.
+The key is only read on the server (`server/integritySummary.ts`) and never reaches the browser. On Vercel, add it under Project Settings → Environment Variables. Only the computed signals are sent to Claude, not the students' work. Without a key, the app shows a built-in summary.
 
 ## Demo accounts
 
@@ -86,7 +88,9 @@ src/
   hooks/           Shared hooks (e.g. the teacher's courses and posts)
   services/        Canvas, contribution analysis, similarity, integrity scoring, file storage
   types/           Shared TypeScript types
-vite.config.ts     Vite config, plus the Canvas proxy and the summary endpoint
+api/server.ts      Vercel Function that serves the same server routes in production
+vercel.json        Vercel build settings and the rewrites to that function
+vite.config.ts     Vite config; runs the server routes as dev/preview middleware
 ```
 
-Built with React 19, TypeScript, Vite, Tailwind CSS 4 and lucide-react. The Canvas API proxy and the Claude summary endpoint run as Vite server middleware, so they work with `npm run dev` and `npm run preview`. A static host would need its own server for them.
+Built with React 19, TypeScript, Vite, Tailwind CSS 4 and lucide-react. The Canvas proxy, Canvas calendar feed and Claude summary live in `server/`. Locally they run as Vite middleware (`npm run dev` / `npm run preview`); on Vercel they run as one function (`api/server.ts`). Deploy with `vercel deploy --prod`.
