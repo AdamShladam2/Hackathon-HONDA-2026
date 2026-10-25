@@ -38,7 +38,7 @@ The key is only read by the dev/preview server (`server/integritySummary.ts`) an
 
 ## Demo accounts
 
-Open **Switch Persona** on your profile (or use the demo tour bar at the top) to sign in without a password:
+Click your name at the top right (or **Or try a demo account** on the sign-in page) to switch accounts without a password:
 
 | Account | Shows |
 | --- | --- |

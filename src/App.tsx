@@ -17,7 +17,6 @@ import { MessageModal } from './components/MessageModal';
 import { InboxView } from './components/InboxView';
 import { SchoolSectionView } from './components/SchoolSectionView';
 import { ProfileView } from './components/ProfileView';
-import { DemoFlowBar } from './components/DemoFlowBar';
 import { TeacherDashboardView } from './components/TeacherDashboardView';
 import { TeammateMatchingView } from './components/TeammateMatchingView';
 import { DiscoverView } from './components/DiscoverView';
@@ -105,8 +104,6 @@ const MainApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
-      {/* 14-Step Priority Demo Flow Bar */}
-      <DemoFlowBar />
 
       {/* Top Navbar */}
       <Navbar />
