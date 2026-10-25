@@ -29,7 +29,7 @@ export const CanvasClassmatesView: React.FC = () => {
     canvasConnection,
     openCanvasModal,
     openMessageModal,
-    openCollaborateModal,
+    openClassInvite,
     openPortfolio,
     allDemoAccounts,
     projects,
@@ -107,13 +107,7 @@ export const CanvasClassmatesView: React.FC = () => {
       githubUsername: classmate.githubUsername,
     };
 
-    // Find user's project to invite them into
-    const firstProject = projects[0];
-    if (firstProject) {
-      openCollaborateModal(firstProject);
-    } else {
-      openMessageModal(authorTarget);
-    }
+    openClassInvite(authorTarget, classmate.courseCode);
   };
 
   const handleMessageClassmate = (classmate: CanvasClassmate) => {

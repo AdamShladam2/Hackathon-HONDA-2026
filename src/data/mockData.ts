@@ -288,7 +288,7 @@ export const DEMO_STUDENTS: Author[] = [
   {
     id: 'user_alex_chen',
     name: 'Alex Chen',
-    email: 'alexchen@buckeyemail.osu.edu',
+    email: 'alexchen@osu.edu',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
     school: 'Ohio State University',
     major: 'Computer Science & Engineering',
@@ -335,18 +335,21 @@ export const DEMO_STUDENTS: Author[] = [
   },
 ];
 
-import { DEMO_TEACHER } from './teacherData';
+import { DEMO_TEACHER, DEMO_TEACHER_ENGR } from './teacherData';
+import { DEMO_ENGR_STUDENT } from './engrStudentDemo';
 
 // All Demo Accounts List for Switcher (includes Dedicated Teacher Account)
 export const ALL_DEMO_ACCOUNTS: Author[] = [
   DEMO_TEACHER,
+  DEMO_TEACHER_ENGR,
   ...DEMO_PROFESSIONALS,
   ...DEMO_INDEPENDENTS,
   ...DEMO_MENTORS,
+  DEMO_ENGR_STUDENT,
   ...DEMO_STUDENTS,
 ];
 
-export { DEMO_TEACHER };
+export { DEMO_TEACHER, DEMO_TEACHER_ENGR };
 
 // Default initial user is Alex Chen (or Sarah Lin when testing professional flow)
 export const CURRENT_USER: Author = DEMO_STUDENTS[0];

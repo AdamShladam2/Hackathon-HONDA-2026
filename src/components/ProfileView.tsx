@@ -42,6 +42,7 @@ export const ProfileView: React.FC = () => {
     allDemoAccounts,
     canvasConnection,
     openCanvasModal,
+    appMode,
   } = useApp();
 
   const ratingSummary = getUserRatingSummaryData(currentUser.id);
@@ -82,8 +83,8 @@ export const ProfileView: React.FC = () => {
                   </button>
                 )}
 
-                {/* Canvas LMS Connection Badge */}
-                {canvasConnection.isConnected ? (
+                {/* Canvas LMS Connection Badge (Campus mode only) */}
+                {appMode !== 'campus' ? null : canvasConnection.isConnected ? (
                   <button
                     onClick={() => setActiveView('canvas-classes')}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-red-800 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full hover:bg-red-100 transition-colors cursor-pointer"
@@ -128,11 +129,6 @@ export const ProfileView: React.FC = () => {
                     {id}
                   </span>
                 ))}
-                {currentUser.openToMentoring && (
-                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                    Industry Mentor
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -219,13 +215,7 @@ export const ProfileView: React.FC = () => {
               Mode:{' '}
               <strong>{currentUser.collaborationPreferences || 'Remote Async'}</strong>
             </div>
-            <div className="text-[11px] text-emerald-700 font-semibold pt-1">
-              {currentUser.seekingMentorship
-                ? 'Actively seeking mentor guidance'
-                : currentUser.openToMentoring
-                ? 'Open to mentoring student contributors'
-                : 'Peer collaboration'}
-            </div>
+
           </div>
 
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">

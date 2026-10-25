@@ -521,7 +521,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({ proj
                           </div>
                           <div>
                             <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                              Mentor / Peer Feedback or Review Note:
+                              Peer Feedback or Review Note:
                             </label>
                             <input
                               type="text"
@@ -690,23 +690,6 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({ proj
               ))}
             </div>
           </div>
-
-          {/* Industry Mentor Coaching & Feedback */}
-          {(project.hasMentor || project.seekingIndustryMentor) && (
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-5 shadow-xs space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-purple-700" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-purple-950">
-                  Industry Mentorship Note
-                </h3>
-              </div>
-              <p className="text-xs text-purple-900 leading-relaxed">
-                {project.hasMentor
-                  ? `Mentored by ${project.mentorName}. Schedule bi-weekly architecture reviews and submit completed tasks for feedback.`
-                  : 'This project is actively seeking an industry mentor for architecture guidance.'}
-              </p>
-            </div>
-          )}
 
           {/* Discussion & Team Updates */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3 flex flex-col justify-between min-h-[380px]">

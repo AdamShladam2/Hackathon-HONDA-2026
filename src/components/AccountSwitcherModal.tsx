@@ -25,8 +25,8 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({ onCl
     onClose();
   };
 
-  const handleTeacherLogin = () => {
-    loginAsTeacher();
+  const handleTeacherLogin = (teacherId?: string) => {
+    loginAsTeacher(teacherId);
     onClose();
   };
 
@@ -72,20 +72,29 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({ onCl
                 Dedicated Teacher / Professor Role
               </div>
               <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                Sign In as Professor Robert Hayes
+                Sign in as a professor
               </h4>
               <p className="text-xs text-slate-300 leading-relaxed max-w-md">
-                Ohio State University CSE Faculty. Access the dedicated <strong>Teacher Dashboard</strong>: create class assignments with anti-plagiarism rules, inspect Google Docs revision timelines, and stamp reviewer confirmations.
+                Ohio State faculty: Prof. Robert Hayes (CSE 3901, CSE 5521) or Dr. Sarah Lin (ENGR 1181). Teacher mode shows <strong>My Students</strong>, <strong>Class Posts</strong> with contribution analysis, and <strong>Research Positions</strong> students can apply to.
               </p>
             </div>
 
-            <button
-              onClick={handleTeacherLogin}
-              className="shrink-0 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02]"
-            >
-              <ShieldCheck className="w-4 h-4 text-emerald-300" />
-              Teacher Login
-            </button>
+            <div className="shrink-0 flex flex-col gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => handleTeacherLogin()}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02] cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                Teacher Login (CSE)
+              </button>
+              <button
+                onClick={() => handleTeacherLogin('user_prof_sarah_lin')}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <GraduationCap className="w-4 h-4 text-indigo-300" />
+                Dr. Sarah Lin · ENGR 1181
+              </button>
+            </div>
           </div>
 
           {/* Mock Auth Distinction Notice */}

@@ -139,19 +139,19 @@ export const DemoFlowBar: React.FC = () => {
     {
       num: 9,
       title: 'Teacher Login',
-      desc: 'Prof. Robert Hayes',
-      done: currentUser.id === 'user_prof_robert_hayes',
+      desc: 'Dr. Sarah Lin · ENGR 1181',
+      done: currentUser.id === 'user_prof_sarah_lin',
       action: () => {
-        loginAsTeacher();
+        loginAsTeacher('user_prof_sarah_lin');
       },
     },
     {
       num: 10,
       title: 'Faculty Audit',
-      desc: 'Audit Student Teams',
+      desc: 'Analyze Class Posts',
       done: true,
       action: () => {
-        loginAsTeacher();
+        loginAsTeacher('user_prof_sarah_lin');
         if (spotlightProject) {
           openContributionAnalysisModal(spotlightProject);
         }

@@ -32,6 +32,7 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
     currentUser,
     setActiveView,
     isDemoAccount,
+    isTeacher,
   } = useApp();
 
   const [email, setEmail] = useState('');
@@ -116,7 +117,9 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
             </div>
           </div>
           <p className="text-xs text-red-100 mt-2">
-            Use your university email to access classmates from your enrolled courses, find team partners, and coordinate coursework deliverables.
+            {isTeacher
+              ? 'Use your university email to load the courses you teach and their student rosters.'
+              : 'Use your university email to access classmates from your enrolled courses, find team partners, and coordinate coursework deliverables.'}
           </p>
         </div>
 
@@ -172,7 +175,7 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. alexchen@buckeyemail.osu.edu or yourname@university.edu"
+                  placeholder="e.g. lastname.123@osu.edu or yourname@university.edu"
                   required
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 font-medium"
                 />
@@ -206,9 +209,9 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
               <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleQuickPreset('alexchen@buckeyemail.osu.edu')}
+                  onClick={() => handleQuickPreset('alexchen@osu.edu')}
                   className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors cursor-pointer font-medium ${
-                    email === 'alexchen@buckeyemail.osu.edu'
+                    email === 'alexchen@osu.edu'
                       ? 'bg-red-50 text-red-700 border-red-300 font-bold'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
@@ -225,17 +228,6 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                   }`}
                 >
                   🟡 Purdue Univ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPreset('priyapatel@umich.edu')}
-                  className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors cursor-pointer font-medium ${
-                    email === 'priyapatel@umich.edu'
-                      ? 'bg-blue-50 text-blue-800 border-blue-300 font-bold'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  🔵 Univ of Michigan
                 </button>
                 <button
                   type="button"
@@ -387,7 +379,11 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
               </p>
               <p className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                <span>View peers in your course sections who are looking for project teammates</span>
+                <span>
+                  {isTeacher
+                    ? 'View the students enrolled in your course sections'
+                    : 'View peers in your course sections who are looking for project teammates'}
+                </span>
               </p>
             </div>
 
@@ -419,7 +415,7 @@ export const CanvasConnectModal: React.FC<CanvasConnectModalProps> = ({ onClose 
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Connect & Load Classmates</span>
+                    <span>{isTeacher ? 'Connect & Load Courses' : 'Connect & Load Classmates'}</span>
                   </>
                 )}
               </button>

@@ -104,6 +104,7 @@ export interface PastWorkRecord {
 }
 
 export interface Author {
+  resume?: ProjectAttachedFile; // Saved resume, reused when applying to opportunities
   id: string;
   name: string;
   avatar: string;
@@ -284,7 +285,8 @@ export interface ProjectAttachedFile {
   storageKey?: string;
   sizeBytes?: number;
   mimeType?: string;
-  source?: 'upload' | 'canvas';
+  source?: 'upload' | 'canvas' | 'google_doc';
+  evidenceId?: string; // Google Doc files: the work evidence record holding its version history
   canvasCourseCode?: string;
   canvasAssignmentName?: string;
 }
@@ -417,6 +419,38 @@ export interface Project {
   school?: string;
 }
 
+// Opportunity a teacher posts for students at their school; research is one kind
+export type OpportunityKind = 'Research' | 'Teaching assistant' | 'Grader' | 'Lab assistant' | 'Tutor' | 'Other';
+
+export interface TeacherOpportunity {
+  id: string;
+  kind: OpportunityKind;
+  teacherId: string;
+  teacherName: string;
+  teacherAvatar: string;
+  department?: string;
+  school?: string;
+  title: string;
+  description: string;
+  hoursPerWeek?: string;
+  compensation?: 'Paid' | 'Course credit' | 'Volunteer';
+  relatedCourse?: string;
+  openings?: number;
+  deadline?: string; // YYYY-MM-DD
+  status: 'open' | 'closed';
+  createdAt: string;
+}
+
+export interface OpportunityApplication {
+  id: string;
+  positionId: string;
+  applicant: Author;
+  message?: string;
+  resume?: ProjectAttachedFile;
+  status: 'pending' | 'accepted' | 'declined';
+  timestamp: string;
+}
+
 export interface ProjectApplication {
   id: string;
   projectId: string;
@@ -427,6 +461,7 @@ export interface ProjectApplication {
   introduction: string;
   availability: string;
   learningGoals?: string;
+  resume?: ProjectAttachedFile;
   isStudentApplication: boolean;
   status: 'pending' | 'accepted' | 'declined';
   timestamp: string;
@@ -473,6 +508,8 @@ export interface Invitation {
   projectTitle: string;
   roleOffered: string;
   note: string;
+  assignmentName?: string; // Campus invites are for a class assignment rather than an existing project
+  courseCode?: string;
   status: 'pending' | 'accepted' | 'declined';
   timestamp: string;
   read: boolean;
@@ -702,7 +739,7 @@ export interface ProjectContributionReport {
 export interface CanvasClassmate {
   id: string;
   name: string;
-  email: string; // School email e.g. "alexchen@buckeyemail.osu.edu"
+  email: string; // School email e.g. "alexchen@osu.edu"
   avatar: string;
   role: 'Student' | 'Teaching Assistant' | 'Instructor';
   courseId: string;

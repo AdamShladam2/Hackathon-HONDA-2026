@@ -8,7 +8,26 @@ export function getEmailDomain(email: string): string {
   return clean.includes('@') ? clean.split('@')[1] : '';
 }
 
-// Campus mode is restricted to .edu addresses (including subdomains like buckeyemail.osu.edu)
+// Email domains (and their subdomains) that may not use the app at all
+export const BLOCKED_EMAIL_DOMAINS = ['umich.edu', 'michigan.edu'];
+export const BLOCKED_EMAIL_MESSAGE = 'University of Michigan email addresses can’t be used with collabr.';
+
+export function isBlockedDomain(domain: string): boolean {
+  const d = domain.trim().toLowerCase();
+  return BLOCKED_EMAIL_DOMAINS.some((blocked) => d === blocked || d.endsWith(`.${blocked}`));
+}
+
+export function isBlockedEmail(email?: string): boolean {
+  return !!email && isBlockedDomain(getEmailDomain(email));
+}
+
+// Ohio State retired buckeyemail.osu.edu; everyone uses name.#@osu.edu now.
+// Rewrites old addresses inside saved JSON so existing browsers keep matching their accounts.
+export function migrateLegacyEmails(json: string): string {
+  return json.split('@buckeyemail.osu.edu').join('@osu.edu');
+}
+
+// Campus mode is restricted to .edu addresses (including subdomains like cs.example.edu)
 export function isEduEmail(email?: string): boolean {
   if (!email) return false;
   return /^[^@\s]+@([a-z0-9-]+\.)+edu$/i.test(email.trim());
@@ -16,7 +35,7 @@ export function isEduEmail(email?: string): boolean {
 
 // Returns the campus an email belongs to, or null when the email can't access Campus mode
 export function getCampusForEmail(email?: string): InstitutionMeta | null {
-  if (!email || !isEduEmail(email)) return null;
+  if (!email || !isEduEmail(email) || isBlockedEmail(email)) return null;
   return resolveInstitutionFromEmail(email);
 }
 

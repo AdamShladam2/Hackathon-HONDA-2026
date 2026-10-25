@@ -43,7 +43,6 @@ export const WorkHubView: React.FC<WorkHubViewProps> = ({ onSelectProject }) => 
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
   const [selectedExperience, setSelectedExperience] = useState<string>('all');
   const [openToStudentsOnly, setOpenToStudentsOnly] = useState(false);
-  const [seekingMentorsOnly, setSeekingMentorsOnly] = useState(false);
 
   // My Work projects (owned or joined)
   const myWorkProjects = useMemo(() => {
@@ -105,11 +104,6 @@ export const WorkHubView: React.FC<WorkHubViewProps> = ({ onSelectProject }) => 
         return false;
       }
 
-      // Seeking mentors filter
-      if (seekingMentorsOnly && !project.seekingIndustryMentor) {
-        return false;
-      }
-
       return true;
     });
   }, [
@@ -119,7 +113,6 @@ export const WorkHubView: React.FC<WorkHubViewProps> = ({ onSelectProject }) => 
     selectedIndustry,
     selectedExperience,
     openToStudentsOnly,
-    seekingMentorsOnly,
     currentUser,
   ]);
 
@@ -146,7 +139,7 @@ export const WorkHubView: React.FC<WorkHubViewProps> = ({ onSelectProject }) => 
             <span>Open to Working Pros & Students</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2" style={{ textWrap: 'balance' }}>
-            Build production-grade projects with industry peers and mentors.
+            Build production-grade projects with industry peers.
           </h1>
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
             A collaborative space for working professionals, independent developers, and university students.
@@ -337,26 +330,13 @@ export const WorkHubView: React.FC<WorkHubViewProps> = ({ onSelectProject }) => 
               <span>Open to Students only</span>
             </button>
 
-            <button
-              onClick={() => setSeekingMentorsOnly(!seekingMentorsOnly)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-medium cursor-pointer transition-colors ${
-                seekingMentorsOnly
-                  ? 'bg-purple-50 border-purple-300 text-purple-800 font-semibold'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-              <span>Seeking Industry Mentor</span>
-            </button>
-
-            {(searchQuery || selectedIndustry !== 'all' || selectedExperience !== 'all' || openToStudentsOnly || seekingMentorsOnly) && (
+            {(searchQuery || selectedIndustry !== 'all' || selectedExperience !== 'all' || openToStudentsOnly) && (
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedIndustry('all');
                   setSelectedExperience('all');
                   setOpenToStudentsOnly(false);
-                  setSeekingMentorsOnly(false);
                 }}
                 className="text-xs text-slate-500 hover:text-slate-800 ml-auto cursor-pointer"
               >
@@ -418,11 +398,6 @@ export const WorkHubView: React.FC<WorkHubViewProps> = ({ onSelectProject }) => 
                   <span className="text-[11px] text-slate-500">
                     {member.availability || 'Available for projects'}
                   </span>
-                  {member.openToMentoring && (
-                    <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.2 rounded">
-                      Open to Mentor
-                    </span>
-                  )}
                 </div>
               </div>
             ))}

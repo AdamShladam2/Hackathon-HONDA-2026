@@ -12,6 +12,7 @@ import { AccountSwitcherModal } from './components/AccountSwitcherModal';
 import { ApplyCollaborateModal } from './components/ApplyCollaborateModal';
 import { GitHubConnectModal } from './components/GitHubConnectModal';
 import { CollaborateModal } from './components/CollaborateModal';
+import { ClassInviteModal } from './components/ClassInviteModal';
 import { MessageModal } from './components/MessageModal';
 import { InboxView } from './components/InboxView';
 import { SchoolSectionView } from './components/SchoolSectionView';
@@ -31,6 +32,11 @@ import { RateTeammateModal } from './components/RateTeammateModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { CanvasClassmatesView } from './components/CanvasClassmatesView';
 import { MyClassesView } from './components/MyClassesView';
+import { CoursePostsView } from './components/CoursePostsView';
+import { TeacherStudentsView } from './components/TeacherStudentsView';
+import { TeacherOpportunitiesView } from './components/TeacherOpportunitiesView';
+import { TeacherIntegrityCheckView } from './components/TeacherIntegrityCheckView';
+import { StudentOpportunitiesView } from './components/StudentOpportunitiesView';
 import { CanvasConnectModal } from './components/CanvasConnectModal';
 import { ModeSelectView } from './components/ModeSelectView';
 import { SignInView } from './components/SignInView';
@@ -58,6 +64,8 @@ const MainApp: React.FC = () => {
     isCollaborateModalOpen,
     collaborateTargetProject,
     closeCollaborateModal,
+    classInviteTarget,
+    closeClassInvite,
     isMessageModalOpen,
     messageTargetAuthor,
     messageTargetProject,
@@ -124,6 +132,13 @@ const MainApp: React.FC = () => {
 
         {/* The student's classes and posts from classmates in each */}
         {activeView === 'my-classes' && <MyClassesView />}
+        {activeView === 'course-posts' && <CoursePostsView />}
+        {activeView === 'teacher-students' && <TeacherStudentsView />}
+        {activeView === 'teacher-opportunities' && <TeacherOpportunitiesView />}
+        {activeView === 'teacher-integrity' && <TeacherIntegrityCheckView />}
+
+        {/* Work Hub projects open to students, inside the Campus section */}
+        {activeView === 'opportunities' && <StudentOpportunitiesView />}
 
         {activeView === 'my-projects' && <MyProjectsView />}
 
@@ -210,10 +225,26 @@ const MainApp: React.FC = () => {
         <CanvasConnectModal onClose={closeCanvasModal} />
       )}
 
-      {isCollaborateModalOpen && collaborateTargetProject && (
+      {/* Campus invites are for a class assignment; Work keeps the project and role invite */}
+      {isCollaborateModalOpen && collaborateTargetProject && appMode === 'campus' && (
+        <ClassInviteModal
+          target={collaborateTargetProject.author}
+          courseHint={collaborateTargetProject.courseCode}
+          onClose={closeCollaborateModal}
+        />
+      )}
+      {isCollaborateModalOpen && collaborateTargetProject && appMode !== 'campus' && (
         <CollaborateModal
           targetProject={collaborateTargetProject}
           onClose={closeCollaborateModal}
+        />
+      )}
+
+      {classInviteTarget && (
+        <ClassInviteModal
+          target={classInviteTarget.author}
+          courseHint={classInviteTarget.courseHint}
+          onClose={closeClassInvite}
         />
       )}
 
@@ -227,7 +258,6 @@ const MainApp: React.FC = () => {
 
       {/* Contribution Portfolio & Document Revision History Modals */}
       <ContributionPortfolioModal />
-      <DocumentRevisionViewerModal />
 
       {/* AI Similarity Report, Add Project To Class & Student Submit Modals */}
       <SimilarityReportModal />
@@ -238,6 +268,9 @@ const MainApp: React.FC = () => {
       <OnboardingModal />
       <RateTeammateModal />
       <ContributionAnalysisModal />
+
+      {/* After the analysis modal so version history opened from it shows on top */}
+      <DocumentRevisionViewerModal />
 
       {/* Toast Notifications */}
       {toasts.length > 0 && (

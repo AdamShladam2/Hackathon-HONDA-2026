@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Project } from '../types';
+import { Project, ProjectAttachedFile } from '../types';
+import { ResumePicker } from './ResumePicker';
 import { useApp } from '../context/AppContext';
 import { X, Send, GraduationCap, Briefcase, Sparkles, CheckCircle2 } from 'lucide-react';
 
@@ -9,7 +10,7 @@ interface ApplyCollaborateModalProps {
 }
 
 export const ApplyCollaborateModal: React.FC<ApplyCollaborateModalProps> = ({ project, onClose }) => {
-  const { currentUser, applyToProject, showToast } = useApp();
+  const { currentUser, applyToProject, showToast, setUserResume } = useApp();
 
   const isStudent = currentUser.identities.includes('Student');
 
@@ -30,6 +31,10 @@ export const ApplyCollaborateModal: React.FC<ApplyCollaborateModalProps> = ({ pr
       : 'Build open-source tooling, collaborate with multidisciplinary builders.'
   );
 
+  // Starts from the resume saved on the profile; a new one also becomes the saved one
+  const [resume, setResume] = useState<ProjectAttachedFile | undefined>(currentUser.resume);
+  const isCrossHub = isStudent && !!project.openToStudents;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleApplied.trim() || !introduction.trim()) {
@@ -42,8 +47,10 @@ export const ApplyCollaborateModal: React.FC<ApplyCollaborateModalProps> = ({ pr
       roleApplied.trim(),
       introduction.trim(),
       availability.trim(),
-      learningGoals.trim()
+      learningGoals.trim(),
+      resume
     );
+    if (resume && resume.id !== currentUser.resume?.id) setUserResume(resume);
 
     onClose();
   };
@@ -154,6 +161,20 @@ export const ApplyCollaborateModal: React.FC<ApplyCollaborateModalProps> = ({ pr
                 {currentUser.skills?.slice(0, 4).join(', ') || 'Software Development'}
               </div>
             </div>
+          </div>
+
+          {/* Resume */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              Resume{' '}
+              <span className="normal-case tracking-normal font-normal text-slate-400">
+                {isCrossHub ? '(recommended)' : '(optional)'}
+              </span>
+            </label>
+            <ResumePicker value={resume} onChange={setResume} compact />
+            {currentUser.resume && resume?.id === currentUser.resume.id && (
+              <p className="text-[11px] text-slate-400 mt-1">Using the resume saved on your profile.</p>
+            )}
           </div>
 
           {/* Learning / Value Goals */}

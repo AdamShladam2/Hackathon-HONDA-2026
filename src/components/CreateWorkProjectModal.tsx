@@ -237,18 +237,6 @@ export const CreateWorkProjectModal: React.FC<CreateWorkProjectModalProps> = ({ 
               </label>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-blue-100">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-blue-950 font-medium">
-                <input
-                  type="checkbox"
-                  checked={seekingIndustryMentor}
-                  onChange={(e) => setSeekingIndustryMentor(e.target.checked)}
-                  className="rounded text-blue-600"
-                />
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                <span>Also seeking an experienced Industry Mentor for technical advisory</span>
-              </label>
-            </div>
           </div>
 
           {/* Title, Summary & Detailed Description */}

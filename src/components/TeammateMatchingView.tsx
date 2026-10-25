@@ -39,6 +39,7 @@ export const TeammateMatchingView: React.FC = () => {
     setActiveView,
     appMode,
     userCampus,
+    openClassInvite,
   } = useApp();
 
   // Filter candidate profiles: exclude current user and teachers.
@@ -70,7 +71,8 @@ export const TeammateMatchingView: React.FC = () => {
   const currentCandidate: Author | undefined = filteredCandidates[currentIndex];
 
   const getSharedCanvasCourses = (candidate?: Author): string[] => {
-    if (!candidate || !canvasConnection.isConnected) return [];
+    // Canvas is school-specific, so Discover mode never shows class links
+    if (!candidate || !canvasConnection.isConnected || appMode !== 'campus') return [];
     const matched = allCanvasClassmates.filter(
       (cm) => cm.associatedDemoAccountId === candidate.id || cm.name.toLowerCase() === candidate.name.toLowerCase()
     );
@@ -84,7 +86,9 @@ export const TeammateMatchingView: React.FC = () => {
 
     setSwipedDirections((prev) => ({ ...prev, [currentCandidate.id]: direction }));
 
-    if (direction === 'right') {
+    if (direction === 'right' && appMode === 'campus') {
+      openClassInvite(currentCandidate, sharedCourses[0]);
+    } else if (direction === 'right') {
       showToast(`Invited ${currentCandidate.name} to connect & collaborate!`, 'success');
     } else {
       showToast(`Passed on ${currentCandidate.name}`, 'info');
@@ -119,7 +123,6 @@ export const TeammateMatchingView: React.FC = () => {
 
   const matchData = currentCandidate ? calculateMatch(currentCandidate) : null;
   const candidateRecords = currentCandidate ? pastWorkRecords[currentCandidate.id] || [] : [];
-  const confirmedCount = candidateRecords.reduce((acc, r) => acc + (r.reviewerConfirmedCount || 0), 0);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6 animate-in fade-in duration-300">
@@ -134,7 +137,7 @@ export const TeammateMatchingView: React.FC = () => {
             Find Teammates with Verified Evidence
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Discover peers for coursework or independent builds. Review individual contribution statements and instructor-confirmed badges before teaming up.
+            Discover peers for coursework or independent builds. Review individual contribution statements and Google Doc version histories before teaming up.
           </p>
         </div>
 
@@ -278,7 +281,7 @@ export const TeammateMatchingView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Reviewer Confirmed Deliverables & Peer Ratings Badges */}
+              {/* Peer Rating Badge */}
               <div className="flex items-center gap-2.5">
                 {/* Peer Rating Badge */}
                 {(() => {
@@ -304,19 +307,6 @@ export const TeammateMatchingView: React.FC = () => {
                   );
                 })()}
 
-                {/* Reviewer Confirmed Deliverables Badge */}
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-center flex flex-col items-center min-w-[110px]">
-                  <div className="flex items-center gap-1 text-emerald-800 font-bold text-xs">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Verified</span>
-                  </div>
-                  <span className="text-lg font-black text-emerald-700 mt-0.5">
-                    {confirmedCount}
-                  </span>
-                  <span className="text-[10px] text-emerald-600 font-medium">
-                    Instructor Confirmed
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -325,7 +315,8 @@ export const TeammateMatchingView: React.FC = () => {
               "{currentCandidate.bio}"
             </p>
 
-            {/* Canvas Course Quick Link Banner */}
+            {/* Canvas Course Quick Link Banner (Campus mode only) */}
+            {appMode === 'campus' && (
             <div className="p-3.5 rounded-2xl bg-red-50/70 border border-red-200/80 flex items-center justify-between gap-3 text-xs flex-wrap">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-red-600 text-white shadow-xs">
@@ -356,6 +347,7 @@ export const TeammateMatchingView: React.FC = () => {
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
+            )}
 
             {/* Past Work Preview & Open Portfolio Button (Key Requirement) */}
             <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between gap-4 flex-wrap">
@@ -365,10 +357,10 @@ export const TeammateMatchingView: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Contribution Portfolio & Verified Coursework ({candidateRecords.length} Projects)
+                    Contribution Portfolio & Coursework ({candidateRecords.length} Projects)
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    Inspect individual contributions, Google Docs specs, and instructor-stamped reviews.
+                    Inspect individual contributions and the Google Doc version history behind each project.
                   </p>
                 </div>
               </div>

@@ -7,6 +7,8 @@ import {
   Invitation,
   CodeRequest,
   ProjectApplication,
+  TeacherOpportunity,
+  OpportunityApplication,
   ProjectTask,
   ProjectMilestone,
   WorkspaceDiscussion,
@@ -30,7 +32,7 @@ import {
   UserIdentity,
   PeerAssessment,
 } from '../types';
-import { LAB_REPORT_DEMO_PROJECT } from '../data/labReportDemo';
+import { LAB_REPORT_DEMO_PROJECT, LAB_REPORT_DOC_EVIDENCE } from '../data/labReportDemo';
 import {
   loadSavedCanvasConnection,
   saveCanvasConnection,
@@ -54,10 +56,12 @@ import {
   INITIAL_PAST_WORK_RECORDS,
   INITIAL_STUDENT_TEAMS,
   DEMO_TEACHER,
+  DEMO_TEACHER_ENGR,
   INITIAL_REUSABLE_PROJECT_TEMPLATES,
   INITIAL_STUDENT_SUBMISSIONS,
   INITIAL_COMPARISON_SOURCES,
 } from '../data/teacherData';
+import { INITIAL_OPPORTUNITY_APPLICATIONS, INITIAL_TEACHER_OPPORTUNITIES } from '../data/teacherOpportunityData';
 import {
   INITIAL_SHOWCASE_PROJECTS,
   INITIAL_CLASS_PROJECTS,
@@ -66,6 +70,7 @@ import {
   INITIAL_CODE_REQUESTS,
 } from '../data/campusData';
 import { INITIAL_TEAMMATE_RATINGS, getUserRatingSummary } from '../data/ratingData';
+import { ENGR_STUDENT_ID, ENGR_STUDENT_PAST_WORK, ENGR_STUDENT_RATINGS } from '../data/engrStudentDemo';
 import { fetchUserRepos } from '../services/github';
 import { calculateSimilarity } from '../services/similarityChecker';
 import {
@@ -73,6 +78,9 @@ import {
   getCampusForEmail,
   isSameCampus,
   authorBelongsToCampus,
+  isBlockedEmail,
+  BLOCKED_EMAIL_MESSAGE,
+  migrateLegacyEmails,
 } from '../services/campusAccess';
 import { InstitutionMeta } from '../data/canvasData';
 
@@ -91,14 +99,31 @@ export type ViewType =
   | 'campus-hub'
   | 'work-hub'
   | 'teacher-dashboard'
+  | 'course-posts'
+  | 'teacher-students'
+  | 'teacher-opportunities'
+  | 'teacher-integrity'
   | 'teammate-match'
   | 'inbox'
   | 'workspace'
   | 'canvas-classes'
-  | 'my-classes';
+  | 'my-classes'
+  | 'opportunities';
 
 // Views that only exist in Campus mode (.edu accounts) or Discover mode (everyone)
-export const CAMPUS_VIEWS: ViewType[] = ['campus-hub', 'my-classes', 'canvas-classes', 'teacher-dashboard'];
+export const CAMPUS_VIEWS: ViewType[] = [
+  'campus-hub',
+  'my-classes',
+  'canvas-classes',
+  'opportunities',
+  'teacher-dashboard',
+  'course-posts',
+  'teacher-students',
+  'teacher-opportunities',
+  'teacher-integrity',
+];
+// Teachers only see these three views
+export const TEACHER_VIEWS: ViewType[] = ['teacher-students', 'course-posts', 'teacher-integrity', 'teacher-opportunities'];
 export const DISCOVER_VIEWS: ViewType[] = ['discover', 'work-hub', 'showcase'];
 
 interface AppContextType {
@@ -180,6 +205,9 @@ interface AppContextType {
   collaborateTargetProject: Project | null;
   openCollaborateModal: (project: Project) => void;
   closeCollaborateModal: () => void;
+  classInviteTarget: { author: Author; courseHint?: string } | null;
+  openClassInvite: (author: Author, courseHint?: string) => void;
+  closeClassInvite: () => void;
 
   isApplyModalOpen: boolean;
   applyTargetProject: Project | null;
@@ -260,7 +288,7 @@ interface AppContextType {
   closeDocumentTimeline: () => void;
 
   // Quick Demo Switching
-  loginAsTeacher: () => void;
+  loginAsTeacher: (teacherId?: string) => void;
   loginAsStudent: (studentId?: string) => void;
 
   // Project Actions
@@ -276,7 +304,22 @@ interface AppContextType {
 
   // Inbox & Applications
   applications: ProjectApplication[];
-  applyToProject: (projectId: string, roleApplied: string, introduction: string, availability: string, learningGoals?: string) => void;
+  isTeacher: boolean;
+  teacherOpportunities: TeacherOpportunity[];
+  opportunityApplications: OpportunityApplication[];
+  addTeacherOpportunity: (position: Omit<TeacherOpportunity, 'id' | 'teacherId' | 'teacherName' | 'teacherAvatar' | 'department' | 'school' | 'status' | 'createdAt'>) => void;
+  setTeacherOpportunityStatus: (positionId: string, status: TeacherOpportunity['status']) => void;
+  applyToTeacherOpportunity: (positionId: string, message?: string, resume?: ProjectAttachedFile) => void;
+  setOpportunityApplicationStatus: (applicationId: string, status: OpportunityApplication['status']) => void;
+  applyToProject: (
+    projectId: string,
+    roleApplied: string,
+    introduction: string,
+    availability: string,
+    learningGoals?: string,
+    resume?: ProjectAttachedFile
+  ) => void;
+  setUserResume: (resume: ProjectAttachedFile | undefined) => void;
   acceptApplication: (applicationId: string) => void;
   declineApplication: (applicationId: string) => void;
 
@@ -291,7 +334,14 @@ interface AppContextType {
   sendReply: (messageId: string, content: string) => void;
   markMessageRead: (messageId: string) => void;
 
-  sendInvitation: (projectId: string, projectTitle: string, toAuthor: Author, roleOffered: string, note: string) => void;
+  sendInvitation: (
+    projectId: string,
+    projectTitle: string,
+    toAuthor: Author,
+    roleOffered: string,
+    note: string,
+    extra?: { assignmentName?: string; courseCode?: string }
+  ) => void;
   acceptInvitation: (invitationId: string) => void;
   declineInvitation: (invitationId: string) => void;
 
@@ -339,7 +389,7 @@ const STORAGE_KEY_PREFIX = 'skillsink_hub_v2_';
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PREFIX + key);
-    if (raw) return JSON.parse(raw);
+    if (raw) return JSON.parse(migrateLegacyEmails(raw));
   } catch (e) {
     console.warn(`Error loading ${key} from storage:`, e);
   }
@@ -387,8 +437,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Class Projects for Campus Hub
   const [classProjects, setClassProjects] = useState<Project[]>(() => {
     const stored = loadFromStorage<Project[]>('classProjects', INITIAL_CLASS_PROJECTS);
-    // Demo lab report project added later, so make sure saved data includes it
-    return stored.some((p) => p.id === LAB_REPORT_DEMO_PROJECT.id) ? stored : [LAB_REPORT_DEMO_PROJECT, ...stored];
+    // The lab report demo is refreshed from its seed (keeping ratings added since), so saved data picks up demo updates
+    const savedDemo = stored.find((p) => p.id === LAB_REPORT_DEMO_PROJECT.id);
+    const demo = { ...LAB_REPORT_DEMO_PROJECT, peerAssessments: savedDemo?.peerAssessments || LAB_REPORT_DEMO_PROJECT.peerAssessments };
+    return savedDemo ? stored.map((p) => (p.id === demo.id ? demo : p)) : [demo, ...stored];
   });
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -409,7 +461,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Teammate Ratings state
   const [teammateRatings, setTeammateRatings] = useState<TeammateRating[]>(() => {
-    return loadFromStorage<TeammateRating[]>('teammateRatings', INITIAL_TEAMMATE_RATINGS);
+    // Seeds the ENGR 1181 demo student's ratings into browsers that saved ratings before she existed
+    const saved = loadFromStorage<TeammateRating[]>('teammateRatings', INITIAL_TEAMMATE_RATINGS);
+    return [...saved, ...ENGR_STUDENT_RATINGS.filter((r) => !saved.some((s) => s.id === r.id))];
   });
 
   // Contribution Analysis Modal & Rate Teammate Modal & Onboarding Modal
@@ -458,6 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isCollaborateModalOpen, setIsCollaborateModalOpen] = useState(false);
   const [collaborateTargetProject, setCollaborateTargetProject] = useState<Project | null>(null);
+  const [classInviteTarget, setClassInviteTarget] = useState<{ author: Author; courseHint?: string } | null>(null);
 
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [applyTargetProject, setApplyTargetProject] = useState<Project | null>(null);
@@ -470,6 +525,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [applications, setApplications] = useState<ProjectApplication[]>(() => {
     return loadFromStorage<ProjectApplication[]>('applications', INITIAL_APPLICATIONS);
   });
+  const [teacherOpportunities, setTeacherOpportunities] = useState<TeacherOpportunity[]>(() =>
+    loadFromStorage<TeacherOpportunity[]>('teacherOpportunities', INITIAL_TEACHER_OPPORTUNITIES)
+  );
+  const [opportunityApplications, setOpportunityApplications] = useState<OpportunityApplication[]>(() =>
+    loadFromStorage<OpportunityApplication[]>('opportunityApplications', INITIAL_OPPORTUNITY_APPLICATIONS)
+  );
   const [messages, setMessages] = useState<Message[]>(() => {
     return loadFromStorage<Message[]>('messages', INITIAL_MESSAGES);
   });
@@ -495,10 +556,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return loadFromStorage<StudentTeam[]>('studentTeams', INITIAL_STUDENT_TEAMS);
   });
   const [workEvidences, setWorkEvidences] = useState<WorkEvidence[]>(() => {
-    return loadFromStorage<WorkEvidence[]>('workEvidences', INITIAL_WORK_EVIDENCES);
+    const stored = loadFromStorage<WorkEvidence[]>('workEvidences', INITIAL_WORK_EVIDENCES);
+    // The lab report demo's Google Doc was added later, so make sure saved data includes it
+    return stored.some((e) => e.id === LAB_REPORT_DOC_EVIDENCE.id) ? stored : [LAB_REPORT_DOC_EVIDENCE, ...stored];
   });
   const [pastWorkRecords, setPastWorkRecords] = useState<Record<string, PastWorkRecord[]>>(() => {
-    return loadFromStorage<Record<string, PastWorkRecord[]>>('pastWorkRecords', INITIAL_PAST_WORK_RECORDS);
+    const saved = loadFromStorage<Record<string, PastWorkRecord[]>>('pastWorkRecords', INITIAL_PAST_WORK_RECORDS);
+    // The ENGR 1181 demo student's records always come from the seed, like the lab report demo
+    return { ...saved, [ENGR_STUDENT_ID]: ENGR_STUDENT_PAST_WORK };
   });
 
   // Teacher Project Search & Reusable Templates
@@ -568,6 +633,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     saveToStorage('applications', applications);
   }, [applications]);
+  useEffect(() => {
+    saveToStorage('teacherOpportunities', teacherOpportunities);
+  }, [teacherOpportunities]);
+  useEffect(() => {
+    saveToStorage('opportunityApplications', opportunityApplications);
+  }, [opportunityApplications]);
 
   useEffect(() => {
     saveToStorage('messages', messages);
@@ -629,6 +700,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveViewState(mode === 'campus' ? 'campus-hub' : 'discover');
   };
 
+  const isTeacher = currentUser.identities.includes('Teacher / Professor');
+
+  // Teacher mode is Campus-only with three views; any other route lands on their class posts
+  useEffect(() => {
+    if (!isSignedIn || !isTeacher) return;
+    if (!hasChosenMode) setHasChosenMode(true);
+    if (appMode !== 'campus') setAppModeState('campus');
+    if (!TEACHER_VIEWS.includes(activeView)) setActiveViewState('course-posts');
+  }, [isSignedIn, isTeacher, hasChosenMode, appMode, activeView]);
+
   // Navigating to a mode-specific view switches into that mode (Campus requires a .edu account)
   const setActiveView = (view: ViewType) => {
     if (CAMPUS_VIEWS.includes(view)) {
@@ -668,9 +749,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Email sign-in: reuses a matching demo or local account, otherwise creates one in this browser
   const signInWithEmail = ({ email, name, identity }: { email: string; name: string; identity: UserIdentity }) => {
-    const cleanEmail = email.trim().toLowerCase();
+    // Old buckeyemail.osu.edu addresses sign in to the same @osu.edu account
+    const cleanEmail = migrateLegacyEmails(email.trim().toLowerCase());
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) {
       return { success: false, message: 'Please enter a valid email address.' };
+    }
+    if (isBlockedEmail(cleanEmail)) {
+      return { success: false, message: BLOCKED_EMAIL_MESSAGE };
     }
     const sameEmail = (a: Author) => (a.email || '').toLowerCase() === cleanEmail;
     let account: Author | undefined = localAccounts.find(sameEmail) || ALL_DEMO_ACCOUNTS.find(sameEmail);
@@ -707,6 +792,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, message: '' };
   };
 
+  // Sessions from blocked email domains (e.g. signed in before the block) are signed out
+  useEffect(() => {
+    if (isSignedIn && isBlockedEmail(currentUser.email)) {
+      signOut();
+      showToast(BLOCKED_EMAIL_MESSAGE, 'warning');
+    }
+  }, [isSignedIn, currentUser.email]);
+
   const signOut = () => {
     setIsSignedIn(false);
     setHasChosenMode(false);
@@ -722,18 +815,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(DEMO_STUDENTS[0]);
     setProjects([...INITIAL_WORK_PROJECTS, ...INITIAL_SHOWCASE_PROJECTS]);
     setApplications(INITIAL_APPLICATIONS);
+    setTeacherOpportunities(INITIAL_TEACHER_OPPORTUNITIES);
+    setOpportunityApplications(INITIAL_OPPORTUNITY_APPLICATIONS);
     setMessages(INITIAL_MESSAGES);
     setInvitations(INITIAL_INVITATIONS);
     setCodeRequests(INITIAL_CODE_REQUESTS);
     setTeacherClasses(INITIAL_TEACHER_CLASSES);
     setClassAssignments(INITIAL_CLASS_ASSIGNMENTS);
     setStudentTeams(INITIAL_STUDENT_TEAMS);
-    setWorkEvidences(INITIAL_WORK_EVIDENCES);
-    setPastWorkRecords(INITIAL_PAST_WORK_RECORDS);
+    setWorkEvidences([LAB_REPORT_DOC_EVIDENCE, ...INITIAL_WORK_EVIDENCES]);
+    setPastWorkRecords({ ...INITIAL_PAST_WORK_RECORDS, [ENGR_STUDENT_ID]: ENGR_STUDENT_PAST_WORK });
     setReusableProjectTemplates(INITIAL_REUSABLE_PROJECT_TEMPLATES);
     setStudentSubmissions(INITIAL_STUDENT_SUBMISSIONS);
     setComparisonSources(INITIAL_COMPARISON_SOURCES);
-    setTeammateRatings(INITIAL_TEAMMATE_RATINGS);
+    setTeammateRatings([...INITIAL_TEAMMATE_RATINGS, ...ENGR_STUDENT_RATINGS]);
     showToast('Demo data reset to fresh state', 'info');
   };
 
@@ -1245,13 +1340,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setViewingDocumentEvidence(null);
   };
 
-  const loginAsTeacher = () => {
-    setCurrentUser(DEMO_TEACHER);
+  const loginAsTeacher = (teacherId?: string) => {
+    const teacher = teacherId === DEMO_TEACHER_ENGR.id ? DEMO_TEACHER_ENGR : DEMO_TEACHER;
+    setCurrentUser(teacher);
     setIsSignedIn(true);
     setAppModeState('campus');
-    setActiveViewState('teacher-dashboard');
+    setActiveViewState('course-posts');
     setHasChosenMode(true);
-    showToast(`Logged in as ${DEMO_TEACHER.name} (Teacher / Professor)`, 'success');
+    showToast(`Logged in as ${teacher.name} (Teacher / Professor)`, 'success');
   };
 
   const loginAsStudent = (studentId = 'user_alex_chen') => {
@@ -1432,6 +1528,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCollaborateTargetProject(null);
     setIsCollaborateModalOpen(false);
   };
+
+  const openClassInvite = (author: Author, courseHint?: string) => setClassInviteTarget({ author, courseHint });
+  const closeClassInvite = () => setClassInviteTarget(null);
 
   const openApplyModal = (project: Project) => {
     setApplyTargetProject(project);
@@ -1796,7 +1895,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     roleApplied: string,
     introduction: string,
     availability: string,
-    learningGoals?: string
+    learningGoals?: string,
+    resume?: ProjectAttachedFile
   ) => {
     const project = projects.find((p) => p.id === projectId);
     if (!project) return;
@@ -1811,6 +1911,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       introduction,
       availability,
       learningGoals,
+      resume,
       isStudentApplication: currentUser.identities.includes('Student'),
       status: 'pending',
       timestamp: new Date().toISOString(),
@@ -1819,6 +1920,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setApplications((prev) => [newApp, ...prev]);
     showToast(`Application submitted to ${project.author.name} for "${project.title}"!`, 'success');
+  };
+
+  // Teacher opportunities (research, TA, grader, ...)
+  const addTeacherOpportunity: AppContextType['addTeacherOpportunity'] = (position) => {
+    const created: TeacherOpportunity = {
+      ...position,
+      id: `opportunity-${Date.now()}`,
+      teacherId: currentUser.id,
+      teacherName: currentUser.name,
+      teacherAvatar: currentUser.avatar,
+      department: currentUser.department,
+      school: userCampus?.name || currentUser.organization,
+      status: 'open',
+      createdAt: new Date().toISOString(),
+    };
+    setTeacherOpportunities((prev) => [created, ...prev]);
+    showToast(`Posted "${created.title}"`, 'success');
+  };
+
+  const setTeacherOpportunityStatus = (positionId: string, status: TeacherOpportunity['status']) => {
+    setTeacherOpportunities((prev) => prev.map((p) => (p.id === positionId ? { ...p, status } : p)));
+  };
+
+  const applyToTeacherOpportunity = (positionId: string, message?: string, resume?: ProjectAttachedFile) => {
+    const position = teacherOpportunities.find((p) => p.id === positionId);
+    if (!position) return;
+    const application: OpportunityApplication = {
+      id: `rapp-${Date.now()}`,
+      positionId,
+      applicant: currentUser,
+      message,
+      resume,
+      status: 'pending',
+      timestamp: new Date().toISOString(),
+    };
+    setOpportunityApplications((prev) => [application, ...prev.filter((a) => !(a.positionId === positionId && a.applicant.id === currentUser.id))]);
+    showToast(`Applied for ${position.title}`, 'success');
+  };
+
+  const setOpportunityApplicationStatus = (applicationId: string, status: OpportunityApplication['status']) => {
+    setOpportunityApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, status } : a)));
+  };
+
+  const setUserResume = (resume: ProjectAttachedFile | undefined) => {
+    setCurrentUser((prev) => ({ ...prev, resume }));
+    // Email accounts keep it across sign-outs
+    setLocalAccounts((prev) => prev.map((a) => (a.id === currentUser.id ? { ...a, resume } : a)));
   };
 
   // Accept Project Application -> Adds applicant to team & workspace!
@@ -1944,7 +2092,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     projectTitle: string,
     toAuthor: Author,
     roleOffered: string,
-    note: string
+    note: string,
+    extra?: { assignmentName?: string; courseCode?: string }
   ) => {
     const newInv: Invitation = {
       id: `inv-${Date.now()}`,
@@ -1961,6 +2110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       projectTitle,
       roleOffered,
       note,
+      ...extra,
       status: 'pending',
       timestamp: new Date().toISOString(),
       read: true,
@@ -2148,6 +2298,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         collaborateTargetProject,
         openCollaborateModal,
         closeCollaborateModal,
+        classInviteTarget,
+        openClassInvite,
+        closeClassInvite,
         isApplyModalOpen,
         applyTargetProject,
         openApplyModal,
@@ -2169,7 +2322,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addWorkProject,
         toggleInterest,
         applications,
+        isTeacher,
+        teacherOpportunities,
+        opportunityApplications,
+        addTeacherOpportunity,
+        setTeacherOpportunityStatus,
+        applyToTeacherOpportunity,
+        setOpportunityApplicationStatus,
         applyToProject,
+        setUserResume,
         acceptApplication,
         declineApplication,
         messages,

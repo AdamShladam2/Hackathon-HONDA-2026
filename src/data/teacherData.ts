@@ -31,6 +31,22 @@ export const DEMO_TEACHER: Author = {
   githubConnected: true,
 };
 
+// ENGR 1181 instructor: sees every campus post and filters to the course she teaches
+export const DEMO_TEACHER_ENGR: Author = {
+  id: 'user_prof_sarah_lin',
+  name: 'Dr. Sarah Lin',
+  email: 'lin.55@osu.edu',
+  avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&auto=format&fit=crop&q=80',
+  bio: 'Senior Lecturer in the Department of Engineering Education at Ohio State University. Teaches the first-year Fundamentals of Engineering sequence, with a focus on lab reports, teamwork and design projects.',
+  identities: ['Teacher / Professor'],
+  jobTitle: 'Senior Lecturer, Engineering Education',
+  organization: 'Ohio State University',
+  department: 'Department of Engineering Education',
+  coursesTaught: ['ENGR 1181: Fundamentals of Engineering I'],
+  officeHours: 'Mondays & Wednesdays 1:00 PM - 3:00 PM (Hitchcock Hall 244)',
+  githubConnected: false,
+};
+
 // ==========================================
 // 2. COURSES / CLASSES
 // ==========================================

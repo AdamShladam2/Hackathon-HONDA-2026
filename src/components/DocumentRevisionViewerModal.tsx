@@ -67,6 +67,7 @@ export const DocumentRevisionViewerModal: React.FC = () => {
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
                   {ev.evidenceType}
                 </span>
+                {isTeacher && (
                 <span
                   className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                     ev.status === 'Reviewer-confirmed'
@@ -78,6 +79,7 @@ export const DocumentRevisionViewerModal: React.FC = () => {
                 >
                   {ev.status}
                 </span>
+                )}
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   Visibility: {ev.visibility}
                 </span>
@@ -236,8 +238,8 @@ export const DocumentRevisionViewerModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Instructor Review Section if already reviewed */}
-          {ev.reviewedBy && (
+          {/* Instructor Review Section if already reviewed (teachers only) */}
+          {isTeacher && ev.reviewedBy && (
             <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
               <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />

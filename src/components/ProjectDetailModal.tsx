@@ -52,6 +52,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
     getCompatibility,
     showToast,
     openPortfolio,
+    workEvidences,
+    openDocumentTimeline,
   } = useApp();
 
   const [requestCodeModalOpen, setRequestCodeModalOpen] = useState(false);
@@ -393,13 +395,22 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
                       <button
                         type="button"
                         onClick={async () => {
+                          // Google Docs open their version history instead of a file
+                          if (file.source === 'google_doc') {
+                            const evidence = workEvidences.find((ev) => ev.id === file.evidenceId);
+                            if (evidence) openDocumentTimeline(evidence);
+                            else showToast(`Version history for "${file.name}" is not available.`, 'warning');
+                            return;
+                          }
                           const opened = await openAttachedFile(file);
                           if (!opened) showToast(`"${file.name}" has no stored copy to open.`, 'warning');
                         }}
                         className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors cursor-pointer shrink-0"
                       >
                         <Download className="w-3 h-3" />
-                        <span>{file.source === 'canvas' ? 'Open in Canvas' : 'View File'}</span>
+                        <span>
+                          {file.source === 'canvas' ? 'Open in Canvas' : file.source === 'google_doc' ? 'Version History' : 'View File'}
+                        </span>
                       </button>
                     </div>
                   </div>

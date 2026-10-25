@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { X, FileText, Clock, Gauge, MessageSquare, Star, Info, CalendarClock } from 'lucide-react';
+import { X, FileText, Clock, Gauge, MessageSquare, Star, Info, CalendarClock, History } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 import { Project } from '../types';
 import { analyzeDocumentEffort, EFFORT_METHOD_NOTE, formatMinutes } from '../services/documentEffortService';
 
@@ -21,7 +22,9 @@ const DifficultyDots: React.FC<{ value: number }> = ({ value }) => (
 // Analysis of each group member's work in the shared Google Doc: time spent,
 // how difficult the sections they worked on were, and when they worked
 export const DocumentEffortModal: React.FC<{ project: Project; onClose: () => void }> = ({ project, onClose }) => {
+  const { workEvidences, openDocumentTimeline } = useApp();
   const doc = project.sharedDocument!;
+  const docEvidence = workEvidences.find((ev) => ev.associatedProjectId === project.id && ev.evidenceType === 'Google Docs');
   const report = useMemo(() => analyzeDocumentEffort(doc, project.teamMembers), [doc, project.teamMembers]);
   const [showMethod, setShowMethod] = useState(false);
 
@@ -79,9 +82,20 @@ export const DocumentEffortModal: React.FC<{ project: Project; onClose: () => vo
               {doc.finalWordCount.toLocaleString()} words
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 cursor-pointer shrink-0" aria-label="Close">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {docEvidence && (
+              <button
+                onClick={() => openDocumentTimeline(docEvidence)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold cursor-pointer"
+              >
+                <History className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Version history</span>
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 cursor-pointer" aria-label="Close">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">

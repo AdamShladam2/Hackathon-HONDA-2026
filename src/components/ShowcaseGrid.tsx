@@ -363,18 +363,6 @@ export const ShowcaseGrid: React.FC<ShowcaseGridProps> = ({ onSelectProject }) =
             <span>Looking for Collaborators</span>
           </button>
 
-          <button
-            onClick={() => setHubFilter('mentors')}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-medium transition-colors cursor-pointer ${
-              hubFilter === 'mentors'
-                ? 'bg-purple-700 border-purple-700 text-white font-semibold'
-                : 'bg-purple-50 border-purple-200 text-purple-800 hover:bg-purple-100'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Seeking Mentors</span>
-          </button>
-
           {/* Reset Filters */}
           {hasActiveFilters && (
             <button

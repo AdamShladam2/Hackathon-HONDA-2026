@@ -17,13 +17,6 @@ export const KNOWN_INSTITUTIONS: InstitutionMeta[] = [
     accentColor: '#bb0000',
   },
   {
-    domain: 'buckeyemail.osu.edu',
-    name: 'Ohio State University',
-    canvasUrl: 'https://osu.instructure.com',
-    state: 'OH',
-    accentColor: '#bb0000',
-  },
-  {
     domain: 'berkeley.edu',
     name: 'UC Berkeley',
     canvasUrl: 'https://canvas.berkeley.edu',
@@ -136,7 +129,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-dan-miller',
         name: 'Daniel Miller',
-        email: 'miller.120@buckeyemail.osu.edu',
+        email: 'miller.120@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-3901',
@@ -160,7 +153,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-chloe-zheng',
         name: 'Chloe Zheng',
-        email: 'zheng.884@buckeyemail.osu.edu',
+        email: 'zheng.884@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-3901',
@@ -183,7 +176,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-maya-lin',
         name: 'Maya Lin',
-        email: 'lin.612@buckeyemail.osu.edu',
+        email: 'lin.612@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-3901',
@@ -206,7 +199,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-siddharth-patel',
         name: 'Siddharth Patel',
-        email: 'patel.392@buckeyemail.osu.edu',
+        email: 'patel.392@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-3901',
@@ -229,7 +222,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-devon-miller',
         name: 'Devon Miller',
-        email: 'miller.419@buckeyemail.osu.edu',
+        email: 'miller.419@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-3901',
@@ -252,7 +245,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-trenton-hayes',
         name: 'Trenton Hayes',
-        email: 'hayes.102@buckeyemail.osu.edu',
+        email: 'hayes.102@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=160&auto=format&fit=crop&q=80',
         role: 'Teaching Assistant',
         courseId: 'course-cse-3901',
@@ -314,7 +307,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-marcus-vance',
         name: 'Marcus Vance',
-        email: 'vance.89@buckeyemail.osu.edu',
+        email: 'vance.89@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-5521',
@@ -338,7 +331,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-elena-ramos',
         name: 'Elena Ramos',
-        email: 'ramos.44@buckeyemail.osu.edu',
+        email: 'ramos.44@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-5521',
@@ -361,7 +354,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-aisha-mansoor',
         name: 'Aisha Al-Mansoor',
-        email: 'almansoor.5@buckeyemail.osu.edu',
+        email: 'almansoor.5@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-5521',
@@ -384,7 +377,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-jordan-king',
         name: 'Jordan King',
-        email: 'king.781@buckeyemail.osu.edu',
+        email: 'king.781@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-cse-5521',
@@ -424,7 +417,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-kevin-zhang',
         name: 'Kevin Zhang',
-        email: 'zhang.2104@buckeyemail.osu.edu',
+        email: 'zhang.2104@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-ece-5020',
@@ -448,7 +441,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-lucas-moretti',
         name: 'Lucas Moretti',
-        email: 'moretti.14@buckeyemail.osu.edu',
+        email: 'moretti.14@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-ece-5020',
@@ -470,7 +463,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-hannah-schmidt',
         name: 'Hannah Schmidt',
-        email: 'schmidt.501@buckeyemail.osu.edu',
+        email: 'schmidt.501@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-ece-5020',
@@ -510,7 +503,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-samira-khan',
         name: 'Samira Khan',
-        email: 'khan.901@buckeyemail.osu.edu',
+        email: 'khan.901@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-engr-1181',
@@ -534,7 +527,7 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
       {
         id: 'cm-brandon-ortiz',
         name: 'Brandon Ortiz',
-        email: 'ortiz.230@buckeyemail.osu.edu',
+        email: 'ortiz.230@osu.edu',
         avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=160&auto=format&fit=crop&q=80',
         role: 'Student',
         courseId: 'course-engr-1181',
@@ -552,6 +545,29 @@ export const INITIAL_OSU_COURSES: CanvasCourse[] = [
         reviewCount: 3,
         githubConnected: false,
         availability: '15 hrs/wk',
+      },
+      {
+        id: 'cm-maya-okonkwo',
+        name: 'Maya Okonkwo',
+        email: 'okonkwo.37@osu.edu',
+        avatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=160&auto=format&fit=crop&q=80',
+        role: 'Student',
+        courseId: 'course-engr-1181',
+        courseCode: 'ENGR 1181',
+        courseName: 'Engineering Fundamentals & Rover Design',
+        section: 'Section 0140 (Studio)',
+        major: 'Civil Engineering',
+        graduationYear: "'29",
+        skills: ['MATLAB', 'Technical Writing', 'Data Analysis', 'Excel'],
+        lookingForTeam: true,
+        teammatePitch: 'I take the analysis and uncertainty sections and start the shared Google Doc early. Looking for a team for the next lab report.',
+        preferredRole: 'Analysis & Writing Lead',
+        verifiedDeliverablesCount: 3,
+        peerRating: 4.9,
+        reviewCount: 3,
+        githubConnected: false,
+        availability: '10-12 hrs/wk',
+        associatedDemoAccountId: 'user_maya_okonkwo',
       },
     ],
   },

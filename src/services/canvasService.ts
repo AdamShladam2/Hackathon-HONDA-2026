@@ -6,13 +6,13 @@ import {
   InstitutionMeta,
   OSU_CANVAS_ASSIGNMENTS,
 } from '../data/canvasData';
-import { isEduEmail } from './campusAccess';
+import { isEduEmail, isBlockedEmail, BLOCKED_EMAIL_MESSAGE, migrateLegacyEmails } from './campusAccess';
 
 const CANVAS_STORAGE_KEY = 'skillsink_canvas_connection_v1';
 
 export const DEFAULT_CANVAS_CONNECTION: CanvasUserConnection = {
   isConnected: true,
-  schoolEmail: 'alexchen@buckeyemail.osu.edu',
+  schoolEmail: 'alexchen@osu.edu',
   studentId: 'osu_std_49182',
   institutionName: 'Ohio State University',
   institutionDomain: 'osu.instructure.com',
@@ -25,9 +25,13 @@ export function loadSavedCanvasConnection(): CanvasUserConnection {
   try {
     const raw = localStorage.getItem(CANVAS_STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw);
+      const parsed = JSON.parse(migrateLegacyEmails(raw));
       if (parsed && typeof parsed.isConnected === 'boolean') {
-        return parsed;
+        // Sample-directory courses pick up roster updates; live Canvas and feed courses have other ids
+        const courses = (parsed.courses || []).map(
+          (c: CanvasUserConnection['courses'][number]) => INITIAL_OSU_COURSES.find((o) => o.id === c.id) || c
+        );
+        return { ...parsed, courses };
       }
     }
   } catch (err) {
@@ -110,6 +114,7 @@ export async function connectCanvasBySchoolEmail(
   if (!cleanEmail || !cleanEmail.includes('@')) {
     throw new Error('Please enter a valid school email address (e.g. yourname@osu.edu).');
   }
+  if (isBlockedEmail(cleanEmail)) throw new Error(BLOCKED_EMAIL_MESSAGE);
   if (!isEduEmail(cleanEmail)) {
     throw new Error('Canvas and Campus mode require a .edu school email address.');
   }
@@ -219,6 +224,7 @@ export async function connectCanvasByCalendarFeed(
   feedUrl: string
 ): Promise<{ success: boolean; connection: CanvasUserConnection; message: string }> {
   const cleanEmail = email.trim().toLowerCase();
+  if (isBlockedEmail(cleanEmail)) throw new Error(BLOCKED_EMAIL_MESSAGE);
   if (!isEduEmail(cleanEmail)) {
     throw new Error('Canvas and Campus mode require a .edu school email address.');
   }

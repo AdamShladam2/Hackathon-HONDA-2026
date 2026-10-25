@@ -13,6 +13,7 @@ import {
   Lock,
   LayoutGrid,
   BookOpen,
+  ScanSearch,
 } from 'lucide-react';
 import { ViewType } from '../context/AppContext';
 
@@ -42,11 +43,44 @@ export const Navbar: React.FC = () => {
     userCampus,
     campusClassAssignments,
     openStudentSubmitModal,
+    openCanvasModal,
   } = useApp();
 
   const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
 
   const isTeacher = currentUser.identities.includes('Teacher / Professor');
+
+  // Teacher mode: their students, posts in their classes, integrity checks, and opportunities they offer
+  const teacherItems: NavItem[] = [
+    {
+      label: 'My Students',
+      views: ['teacher-students'],
+      icon: Users,
+      iconClass: 'text-indigo-600',
+      activeClass: 'bg-indigo-50 text-indigo-800 font-bold border border-indigo-200',
+    },
+    {
+      label: 'Class Posts',
+      views: ['course-posts'],
+      icon: BookOpen,
+      iconClass: 'text-indigo-600',
+      activeClass: 'bg-indigo-50 text-indigo-800 font-bold border border-indigo-200',
+    },
+    {
+      label: 'Integrity Check',
+      views: ['teacher-integrity'],
+      icon: ScanSearch,
+      iconClass: 'text-indigo-600',
+      activeClass: 'bg-indigo-50 text-indigo-800 font-bold border border-indigo-200',
+    },
+    {
+      label: 'Opportunities',
+      views: ['teacher-opportunities'],
+      icon: Briefcase,
+      iconClass: 'text-indigo-600',
+      activeClass: 'bg-indigo-50 text-indigo-800 font-bold border border-indigo-200',
+    },
+  ];
 
   const teammatesItem: NavItem = {
     label: 'Find Teammates',
@@ -82,8 +116,9 @@ export const Navbar: React.FC = () => {
   ];
 
   // Each mode is its own section of the app with its own tabs
-  const navItems: NavItem[] =
-    appMode === 'campus'
+  const navItems: NavItem[] = isTeacher
+    ? teacherItems
+    : appMode === 'campus'
       ? [
           {
             label: 'Campus Hub',
@@ -109,17 +144,13 @@ export const Navbar: React.FC = () => {
             badgeClass: 'bg-red-100 text-red-800',
           },
           { ...teammatesItem, label: 'Classmates' },
-          ...(isTeacher
-            ? [
-                {
-                  label: 'Teacher Dashboard',
-                  views: ['teacher-dashboard'] as ViewType[],
-                  icon: GraduationCap,
-                  iconClass: 'text-indigo-600',
-                  activeClass: 'bg-indigo-900 text-white font-bold shadow-sm',
-                },
-              ]
-            : []),
+          {
+            label: 'Opportunities',
+            views: ['opportunities'],
+            icon: Briefcase,
+            iconClass: 'text-emerald-600',
+            activeClass: 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200',
+          },
           ...sharedItems,
         ]
       : [
@@ -154,7 +185,7 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between gap-4 h-16">
           {/* Logo / Brand Mark */}
           <button
-            onClick={() => setActiveView(appMode === 'campus' ? 'campus-hub' : 'discover')}
+            onClick={() => setActiveView(isTeacher ? 'course-posts' : appMode === 'campus' ? 'campus-hub' : 'discover')}
             className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-sm transition-transform group-hover:scale-105">
@@ -167,7 +198,8 @@ export const Navbar: React.FC = () => {
             </div>
           </button>
 
-          {/* Mode Switch: Campus (.edu, own school) vs Discover (everyone) */}
+          {/* Mode Switch: Campus (.edu, own school) vs Discover (everyone); teachers stay in Campus */}
+          {!isTeacher && (
           <div className="hidden md:flex items-center p-0.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold shrink-0">
             <button
               onClick={() => setAppMode('campus')}
@@ -197,6 +229,7 @@ export const Navbar: React.FC = () => {
               <span>Discover</span>
             </button>
           </div>
+          )}
 
           {/* Mode-specific Primary Navigation */}
           <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
@@ -225,6 +258,21 @@ export const Navbar: React.FC = () => {
 
           {/* Persona Switcher & New CTA */}
           <div className="flex items-center gap-2.5 shrink-0">
+            {/* Teachers connect Carmen here (they have no Canvas Classes tab) */}
+            {isTeacher && (
+              <button
+                onClick={openCanvasModal}
+                title={canvasConnection.isConnected ? 'Manage your Carmen connection' : 'Connect Carmen to load your courses'}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer ${
+                  canvasConnection.isConnected
+                    ? 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100'
+                    : 'bg-red-600 text-white border-red-600 hover:bg-red-700'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>{canvasConnection.isConnected ? 'Carmen connected' : 'Connect Carmen'}</span>
+              </button>
+            )}
             {/* Account Switcher Button */}
             <button
               onClick={openAccountSwitcher}
@@ -248,7 +296,8 @@ export const Navbar: React.FC = () => {
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
 
-            {/* Create Project CTA Button with Dropdown */}
+            {/* Create Project CTA Button with Dropdown (not shown to teachers) */}
+            {!isTeacher && (
             <div className="relative">
               <button
                 onClick={() => setCreateDropdownOpen(!createDropdownOpen)}
@@ -362,11 +411,13 @@ export const Navbar: React.FC = () => {
                 </>
               )}
             </div>
+            )}
           </div>
         </div>
 
         {/* Mobile Navigation bar (mode switch + mode-specific items) */}
         <div className="lg:hidden flex items-center justify-around gap-1 py-2 border-t border-slate-100 text-xs font-semibold overflow-x-auto">
+          {!isTeacher && (
           <button
             onClick={() => setAppMode(appMode === 'campus' ? 'discover' : 'campus')}
             className="py-1 px-2 shrink-0 rounded-md bg-slate-100 text-slate-700 font-bold flex items-center gap-1"
@@ -374,6 +425,7 @@ export const Navbar: React.FC = () => {
             {appMode === 'campus' ? <Compass className="w-3.5 h-3.5" /> : <GraduationCap className="w-3.5 h-3.5" />}
             {appMode === 'campus' ? 'Discover' : 'Campus'}
           </button>
+          )}
           {navItems.map((item) => (
             <button
               key={item.label}

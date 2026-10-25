@@ -5,6 +5,7 @@ import {
   ProjectContributionReport,
   MemberContributionAnalysis,
 } from '../types';
+import { analyzeDocumentEffort, formatMinutes } from './documentEffortService';
 
 /**
  * Transparent methodology explanation for evaluating documented participation.
@@ -197,7 +198,7 @@ export function analyzeProjectContributions(
   const totalDeliverables = projectEvidences.length || 4;
   const confirmedDeliverables = projectEvidences.filter((e) => e.status === 'Reviewer-confirmed').length || 3;
 
-  return {
+  const report: ProjectContributionReport = {
     projectId: project.id,
     projectTitle: project.title,
     calculatedAt: new Date().toISOString(),
@@ -211,5 +212,49 @@ export function analyzeProjectContributions(
       '3 of 4 team members demonstrate high-confidence evidence with verified revision logs and pull requests. 1 member exhibits limited documented artifacts.',
     assessmentMethodology: ASSESSMENT_METHODOLOGY_NOTICE,
     aiAssisted: true,
+  };
+
+  return project.sharedDocument ? withDocumentEffort(report, project) : report;
+}
+
+// Projects written in a shared Google Doc are assessed from the doc's version history:
+// each member's editing time weighted by the difficulty of the sections they worked on
+function withDocumentEffort(report: ProjectContributionReport, project: Project): ProjectContributionReport {
+  const doc = project.sharedDocument!;
+  const effort = analyzeDocumentEffort(doc, project.teamMembers);
+  const even = effort.members.length ? 1 / effort.members.length : 0;
+
+  const members = report.members.map((analysis) => {
+    const m = effort.members.find((e) => e.member.id === analysis.memberId);
+    if (!m) return analysis;
+    const first = m.member.name.split(' ')[0];
+    const questions: string[] = [];
+    if (m.effortShare < even * 0.5) {
+      questions.push(`Did ${first} contribute outside the Google Doc, such as lab bench work, calculations on paper or meetings?`);
+      questions.push('Did the group agree to split the work this way?');
+    }
+    if (m.finalDayShare >= 0.6) questions.push(`Why did most of ${first}'s editing happen in the final 24 hours?`);
+
+    return {
+      ...analysis,
+      githubEvidence: undefined,
+      documentedContributionShare: Math.round(m.effortShare * 100),
+      evidenceCoverage: (m.minutes >= 90 ? 'High' : m.minutes >= 45 ? 'Moderate' : m.minutes > 0 ? 'Limited' : 'Insufficient') as MemberContributionAnalysis['evidenceCoverage'],
+      evidenceLimitations: `${formatMinutes(m.minutes)} of editing over ${m.sessions} session${m.sessions === 1 ? '' : 's'} in the Google Doc's version history (average section difficulty ${m.avgDifficulty.toFixed(1)} of 5).`,
+      summaryText: `${m.member.name} (${m.member.role}): ${m.insights.join(' ')}`,
+      demonstratedSkills: m.sectionsLed.length > 0 ? m.sectionsLed.map((s) => s.title) : ['Technical Writing'],
+      questionsForInvestigation: questions.length > 0 ? questions : undefined,
+    };
+  });
+
+  return {
+    ...report,
+    members,
+    totalTasks: doc.sections.length,
+    completedTasks: doc.sections.length,
+    totalDeliverables: report.members.length ? 1 : 0,
+    confirmedDeliverables: 0,
+    overallProjectSummary: effort.teamSummary,
+    evidenceCompletenessNote: `${effort.members.filter((m) => m.minutes > 0).length} of ${effort.members.length} members appear in the Google Doc's version history (${doc.sessions.length} editing sessions, ${formatMinutes(effort.totalMinutes)} total).`,
   };
 }

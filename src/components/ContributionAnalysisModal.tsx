@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { analyzeProjectContributions, ASSESSMENT_METHODOLOGY_NOTICE } from '../services/contributionAnalysisService';
 import { MemberContributionAnalysis, Author } from '../types';
+import { DocumentEffortModal } from './DocumentEffortModal';
 
 export const ContributionAnalysisModal: React.FC = () => {
   const {
@@ -31,10 +32,12 @@ export const ContributionAnalysisModal: React.FC = () => {
     openRateTeammateModal,
     allDemoAccounts,
     showToast,
+    isTeacher,
   } = useApp();
 
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [showMethodology, setShowMethodology] = useState<boolean>(false);
+  const [showDocEffort, setShowDocEffort] = useState(false);
 
   if (!analyzingProject) return null;
 
@@ -93,6 +96,45 @@ export const ContributionAnalysisModal: React.FC = () => {
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+          {showDocEffort && <DocumentEffortModal project={analyzingProject} onClose={() => setShowDocEffort(false)} />}
+
+          {/* Projects written in a shared Google Doc: link to its version history and time/difficulty breakdown */}
+          {analyzingProject.sharedDocument && (
+            <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <FileText className="w-4 h-4 text-sky-700 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-sky-900">Based on the group's Google Doc</p>
+                  <p className="text-slate-600">
+                    Shares below come from "{analyzingProject.sharedDocument.title}": each member's editing time in its version
+                    history, weighted by how difficult each section is.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                {(() => {
+                  const docEvidence = workEvidences.find(
+                    (ev) => ev.associatedProjectId === analyzingProject.id && ev.evidenceType === 'Google Docs'
+                  );
+                  return docEvidence ? (
+                    <button
+                      onClick={() => openDocumentTimeline(docEvidence)}
+                      className="px-3 py-1.5 rounded-lg bg-white border border-sky-300 text-sky-800 font-bold hover:bg-sky-100 cursor-pointer"
+                    >
+                      Version history
+                    </button>
+                  ) : null;
+                })()}
+                <button
+                  onClick={() => setShowDocEffort(true)}
+                  className="px-3 py-1.5 rounded-lg bg-sky-700 text-white font-bold hover:bg-sky-800 cursor-pointer"
+                >
+                  Time & difficulty breakdown
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Transparent Notice Banner */}
           <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-4 text-xs text-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-start gap-2.5">
@@ -160,7 +202,9 @@ export const ContributionAnalysisModal: React.FC = () => {
                   </p>
                 </div>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  {report.completedTasks} of {report.totalTasks} Tasks Done
+                  {analyzingProject.sharedDocument
+                    ? `${report.totalTasks} doc sections`
+                    : `${report.completedTasks} of ${report.totalTasks} Tasks Done`}
                 </span>
               </div>
 
@@ -397,7 +441,7 @@ export const ContributionAnalysisModal: React.FC = () => {
                             <span className="font-semibold text-slate-800 truncate">{ev.title}</span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {ev.status === 'Reviewer-confirmed' && (
+                            {isTeacher && ev.status === 'Reviewer-confirmed' && (
                               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                                 Verified
                               </span>

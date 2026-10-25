@@ -183,7 +183,7 @@ export const MyProjectsView: React.FC = () => {
 
                 {/* Primary Card Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {/* Rate Teammate Action */}
                     {otherMembers.length > 0 && (
                       <button
@@ -195,17 +195,25 @@ export const MyProjectsView: React.FC = () => {
                       </button>
                     )}
 
-                    {/* Analyze Contributions Action: projects written in a shared Google Doc
-                        get the time and difficulty analysis of the doc's edit history */}
+                    {/* Analyze Contributions Action */}
                     <button
-                      onClick={() =>
-                        project.sharedDocument ? setDocAnalysisProject(project) : openContributionAnalysisModal(project)
-                      }
+                      onClick={() => openContributionAnalysisModal(project)}
                       className="px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <BarChart3 className="w-3.5 h-3.5 text-blue-600" />
                       <span>Analyze Contributions</span>
                     </button>
+
+                    {/* Projects written in a shared Google Doc: time and difficulty from its version history */}
+                    {project.sharedDocument && (
+                      <button
+                        onClick={() => setDocAnalysisProject(project)}
+                        className="px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold border border-sky-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-sky-700" />
+                        <span>Google Doc Effort</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Open Workspace Action */}

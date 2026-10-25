@@ -28,6 +28,7 @@ export const ContributionPortfolioModal: React.FC = () => {
     openDocumentTimeline,
     currentUser,
     openMessageModal,
+    isTeacher,
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'academic' | 'professional'>('all');
@@ -98,10 +99,13 @@ export const ContributionPortfolioModal: React.FC = () => {
 
                 {/* Verified Badges Strip */}
                 <div className="flex items-center gap-3 mt-2 flex-wrap text-xs">
-                  <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-semibold">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>{totalConfirmed} Reviewer-Confirmed Deliverables</span>
-                  </div>
+                  {/* Instructor confirmations are only shown to teachers */}
+                  {isTeacher && (
+                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-semibold">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>{totalConfirmed} Reviewer-Confirmed Deliverables</span>
+                    </div>
+                  )}
 
                   <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 font-medium">
                     <Award className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -124,7 +128,7 @@ export const ContributionPortfolioModal: React.FC = () => {
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
               <span>
-                <strong>Academic Integrity Protection:</strong> Raw course assignment code solutions and repository branches are restricted to instructors & team members. Only verified skill demonstrations and instructor-signed summaries are displayed.
+                <strong>Academic Integrity Protection:</strong> Raw course assignment code solutions and repository branches are restricted to instructors & team members. Only individual contribution summaries and document version histories are displayed.
               </span>
             </div>
             {author.id !== currentUser.id && (
@@ -210,6 +214,7 @@ export const ContributionPortfolioModal: React.FC = () => {
                         </span>
                       )}
 
+                      {isTeacher && (
                       <span
                         className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                           record.overallStatus === 'Reviewer-confirmed'
@@ -219,6 +224,7 @@ export const ContributionPortfolioModal: React.FC = () => {
                       >
                         {record.overallStatus}
                       </span>
+                      )}
                     </div>
 
                     <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1.5">
@@ -230,7 +236,7 @@ export const ContributionPortfolioModal: React.FC = () => {
                     </p>
                   </div>
 
-                  {record.reviewedByTeacher && (
+                  {isTeacher && record.reviewedByTeacher && (
                     <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-3 py-1.5 flex items-center gap-2 text-right">
                       <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                       <div className="text-left">
@@ -318,6 +324,7 @@ export const ContributionPortfolioModal: React.FC = () => {
                               <span className="text-xs font-bold text-slate-900 dark:text-white">
                                 {ev.title}
                               </span>
+                              {isTeacher && (
                               <span
                                 className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                                   ev.status === 'Reviewer-confirmed'
@@ -329,6 +336,7 @@ export const ContributionPortfolioModal: React.FC = () => {
                               >
                                 {ev.status}
                               </span>
+                              )}
                               <span className="text-[10px] text-slate-400 font-mono">
                                 {ev.evidenceType}
                               </span>
@@ -339,7 +347,7 @@ export const ContributionPortfolioModal: React.FC = () => {
                             </p>
 
                             {/* Reviewer Note if available */}
-                            {ev.reviewerFeedback && (
+                            {isTeacher && ev.reviewerFeedback && (
                               <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 italic font-medium">
                                 Instructor Stamp: "{ev.reviewerFeedback}" — {ev.reviewedBy?.name}
                               </p>

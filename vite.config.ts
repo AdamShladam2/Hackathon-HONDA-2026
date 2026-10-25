@@ -2,12 +2,17 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import type { IncomingMessage, ServerResponse } from 'http';
-import {defineConfig, type Plugin} from 'vite';
+import {defineConfig, loadEnv, type Plugin} from 'vite';
+import { integritySummaryHandler } from './server/integritySummary';
 
 // Canvas's REST API doesn't allow browser cross-origin requests, so the app calls
 // /canvas-proxy/<canvas host>/api/v1/... and this dev/preview server forwards it.
 // Only read-only (GET) API calls to Canvas hosts are forwarded.
+// Matches BLOCKED_EMAIL_DOMAINS in src/services/campusAccess.ts
+const BLOCKED_HOSTS = ['umich.edu', 'michigan.edu', 'umich.instructure.com'];
+
 function isAllowedCanvasHost(host: string): boolean {
+  if (BLOCKED_HOSTS.some((b) => host === b || host.endsWith(`.${b}`))) return false;
   return /^([a-z0-9-]+\.)+instructure\.com$/.test(host) || /^([a-z0-9-]+\.)+edu$/.test(host);
 }
 
@@ -55,10 +60,12 @@ function canvasApiProxy(): Plugin {
     configureServer(server) {
       server.middlewares.use(handler);
       server.middlewares.use(feedHandler);
+      server.middlewares.use(integritySummaryHandler);
     },
     configurePreviewServer(server) {
       server.middlewares.use(handler);
       server.middlewares.use(feedHandler);
+      server.middlewares.use(integritySummaryHandler);
     },
   };
 }
@@ -100,7 +107,10 @@ const feedHandler = async (req: IncomingMessage, res: ServerResponse, next: () =
   }
 };
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
+  // The Claude summary endpoint reads ANTHROPIC_API_KEY from .env on the server only (no VITE_ prefix)
+  const env = loadEnv(mode, process.cwd(), '');
+  if (env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY) process.env.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
   return {
     plugins: [react(), tailwindcss(), canvasApiProxy()],
     resolve: {

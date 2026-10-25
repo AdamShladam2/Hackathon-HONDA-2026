@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { UserIdentity } from '../types';
-import { getCampusForEmail } from '../services/campusAccess';
+import { getCampusForEmail, isBlockedEmail, BLOCKED_EMAIL_MESSAGE } from '../services/campusAccess';
 import { GraduationCap, Compass, Users, ArrowRight } from 'lucide-react';
 
 const ROLE_OPTIONS: UserIdentity[] = [
@@ -63,7 +63,10 @@ export const SignInView: React.FC = () => {
             required
             className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-          {looksComplete && (
+          {looksComplete && isBlockedEmail(email) && (
+            <p className="mt-1.5 text-[11px] font-semibold text-rose-600">{BLOCKED_EMAIL_MESSAGE}</p>
+          )}
+          {looksComplete && !isBlockedEmail(email) && (
             <p
               className={`mt-1.5 text-[11px] font-semibold flex items-center gap-1.5 ${
                 campus ? 'text-red-700' : 'text-blue-700'

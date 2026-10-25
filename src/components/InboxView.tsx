@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { openAttachedFile } from '../services/fileStore';
 import {
   MessageSquare,
   UserPlus,
@@ -16,11 +17,13 @@ import {
   FileCheck2,
   GraduationCap,
   Briefcase,
+  FileText,
 } from 'lucide-react';
 
 export const InboxView: React.FC = () => {
   const {
     currentUser,
+    showToast,
     messages,
     invitations,
     codeRequests,
@@ -276,6 +279,17 @@ export const InboxView: React.FC = () => {
                           <span>
                             <strong>Skills:</strong> {app.applicant.skills?.slice(0, 4).join(', ') || 'Software Dev'}
                           </span>
+                          {app.resume && (
+                            <button
+                              onClick={async () => {
+                                if (!(await openAttachedFile(app.resume!))) showToast('This resume is not stored in this browser.', 'warning');
+                              }}
+                              className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:underline cursor-pointer"
+                            >
+                              <FileText className="w-3 h-3" />
+                              View resume
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -363,9 +377,17 @@ export const InboxView: React.FC = () => {
                         {inv.projectTitle}
                       </h3>
 
-                      <div className="inline-block text-xs font-medium text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded">
-                        Offered Role: <span className="font-semibold text-slate-900">{inv.roleOffered}</span>
-                      </div>
+                      {inv.assignmentName ? (
+                        inv.roleOffered && inv.roleOffered !== 'Teammate' && (
+                          <div className="inline-block text-xs font-medium text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded">
+                            Could work on: <span className="font-semibold text-slate-900">{inv.roleOffered}</span>
+                          </div>
+                        )
+                      ) : (
+                        <div className="inline-block text-xs font-medium text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded">
+                          Offered Role: <span className="font-semibold text-slate-900">{inv.roleOffered}</span>
+                        </div>
+                      )}
 
                       <p className="text-xs text-slate-600 pt-1 leading-relaxed max-w-2xl bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                         &quot;{inv.note}&quot;

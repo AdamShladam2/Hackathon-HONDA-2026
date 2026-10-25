@@ -1,4 +1,4 @@
-import { DocumentEditSession, Project } from '../types';
+import { DocumentEditSession, Project, SharedDocumentActivity, WorkEvidence } from '../types';
 import { DEMO_STUDENTS } from './mockData';
 
 // Demo: an ENGR 1181 group lab report written in a shared Google Doc. The edit sessions
@@ -50,6 +50,9 @@ const session = (
   note,
 });
 
+export const LAB_REPORT_DOC_EVIDENCE_ID = 'evidence-engr1181-lab5-gdoc';
+const LAB_REPORT_DOC_TITLE = 'ENGR 1181 Lab 5 – Beam Deflection (Group Report)';
+
 export const LAB_REPORT_DEMO_PROJECT: Project = {
   id: 'class-proj-engr1181-lab5',
   title: 'ENGR 1181 Lab 5: Beam Deflection & Material Stiffness',
@@ -81,6 +84,20 @@ export const LAB_REPORT_DEMO_PROJECT: Project = {
   courseName: 'Engineering Fundamentals & Rover Design',
   professorName: 'Dr. Sarah Lin',
   attachedFiles: [
+    {
+      id: 'file-lab5-gdoc',
+      name: LAB_REPORT_DOC_TITLE,
+      size: '2,725 words',
+      type: 'Google Doc',
+      mimeType: 'application/vnd.google-apps.document',
+      url: '',
+      source: 'google_doc',
+      evidenceId: LAB_REPORT_DOC_EVIDENCE_ID,
+      labeledStudentId: 'team',
+      labeledStudentName: 'Whole Team Deliverable',
+      description: 'The shared Google Doc the group wrote the report in. Open it to see its version history.',
+      uploadedAt: '2026-10-14T22:55:00Z',
+    },
     {
       id: 'file-lab5-report',
       name: 'ENGR1181_Lab5_Beam_Deflection_Report.pdf',
@@ -114,7 +131,7 @@ export const LAB_REPORT_DEMO_PROJECT: Project = {
     { id: 'pa-lab5-6', assignmentName: 'Lab 5 Report', reviewerId: MEMBERS.brandon.id, reviewerName: MEMBERS.brandon.name, revieweeId: MEMBERS.samira.id, revieweeName: MEMBERS.samira.name, rating: 5, createdAt: '2026-10-21T15:00:00Z' },
   ],
   sharedDocument: {
-    title: 'ENGR 1181 Lab 5 – Beam Deflection (Group Report)',
+    title: LAB_REPORT_DOC_TITLE,
     assignmentName: 'Lab 5 Report',
     dueAt: new Date('2026-10-20T23:59:00-04:00').toISOString(),
     finalWordCount: 2725,
@@ -144,8 +161,52 @@ export const LAB_REPORT_DEMO_PROJECT: Project = {
       session(MEMBERS.alex.id, 'discussion', '2026-10-20T16:00', 25, 90, 20, 'reviewing', 'Flagged two discussion claims the data didn’t support', 3),
       session(MEMBERS.brandon.id, 'refs', '2026-10-20T21:30', 40, 40, 60, 'revising', 'Numbered figures and tables and fixed the citation style'),
       session(MEMBERS.daniel.id, 'abstract', '2026-10-20T22:10', 25, 180, 0, 'writing', 'Wrote the abstract'),
-      session(MEMBERS.daniel.id, 'discussion', '2026-10-20T22:45', 20, 140, 10, 'writing', 'Added a paragraph on real-world uses of beam stiffness'),
+      session(MEMBERS.daniel.id, 'discussion', '2026-10-20T22:45', 3, 140, 10, 'writing', 'Pasted in a paragraph on real-world uses of beam stiffness'),
       session(MEMBERS.daniel.id, 'procedure', '2026-10-20T23:15', 10, 20, 40, 'revising', 'Reworded two procedure steps'),
     ],
   },
+};
+
+const ACTIVITY_VERB: Record<DocumentEditSession['activity'], string> = {
+  writing: 'Wrote',
+  revising: 'Revised',
+  reviewing: 'Reviewed',
+  data: 'Added data to',
+};
+
+const doc = LAB_REPORT_DEMO_PROJECT.sharedDocument as SharedDocumentActivity;
+
+// The Google Doc as work evidence, so the version history viewer and the
+// contribution analysis can show it for every group member
+export const LAB_REPORT_DOC_EVIDENCE: WorkEvidence = {
+  id: LAB_REPORT_DOC_EVIDENCE_ID,
+  title: LAB_REPORT_DOC_TITLE,
+  url: '',
+  evidenceType: 'Google Docs',
+  description:
+    'Group lab report written together in one Google Doc. Alex led Data & Results, Samira led Theory and Error Analysis, Brandon wrote the Procedure, Conclusion and formatting, and Daniel wrote the Abstract.',
+  associatedProjectId: LAB_REPORT_DEMO_PROJECT.id,
+  associatedProjectTitle: LAB_REPORT_DEMO_PROJECT.title,
+  date: '2026-10-21',
+  visibility: 'Team Only',
+  status: 'Evidence attached',
+  claimedSections: doc.sections.map((s) => s.title),
+  contributors: Object.values(MEMBERS),
+  documentTimeline: doc.sessions
+    .slice()
+    .sort((a, b) => b.start.localeCompare(a.start))
+    .map((s) => {
+      const member = Object.values(MEMBERS).find((m) => m.id === s.memberId);
+      const section = doc.sections.find((x) => x.id === s.sectionId);
+      return {
+        timestamp: s.start,
+        authorName: member?.name || 'Unknown',
+        authorId: s.memberId,
+        action: `${ACTIVITY_VERB[s.activity]} ${section?.title} · ${s.minutes} min · +${s.wordsAdded} / −${s.wordsDeleted} words${
+          s.comments ? ` · ${s.comments} comments` : ''
+        }`,
+        section: section?.title || '',
+        note: s.note,
+      };
+    }),
 };
