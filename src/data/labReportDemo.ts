@@ -161,7 +161,7 @@ export const LAB_REPORT_DEMO_PROJECT: Project = {
       session(MEMBERS.alex.id, 'discussion', '2026-10-20T16:00', 25, 90, 20, 'reviewing', 'Flagged two discussion claims the data didn’t support', 3),
       session(MEMBERS.brandon.id, 'refs', '2026-10-20T21:30', 40, 40, 60, 'revising', 'Numbered figures and tables and fixed the citation style'),
       session(MEMBERS.daniel.id, 'abstract', '2026-10-20T22:10', 25, 180, 0, 'writing', 'Wrote the abstract'),
-      session(MEMBERS.daniel.id, 'discussion', '2026-10-20T22:45', 3, 140, 10, 'writing', 'Pasted in a paragraph on real-world uses of beam stiffness'),
+      session(MEMBERS.daniel.id, 'discussion', '2026-10-20T22:45', 20, 140, 10, 'writing', 'Added a paragraph on real-world uses of beam stiffness'),
       session(MEMBERS.daniel.id, 'procedure', '2026-10-20T23:15', 10, 20, 40, 'revising', 'Reworded two procedure steps'),
     ],
   },

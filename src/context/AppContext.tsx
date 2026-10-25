@@ -710,6 +710,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!TEACHER_VIEWS.includes(activeView)) setActiveViewState('course-posts');
   }, [isSignedIn, isTeacher, hasChosenMode, appMode, activeView]);
 
+  // Teacher pages (including integrity scores) are never shown to students, e.g. after switching accounts
+  useEffect(() => {
+    if (isTeacher) return;
+    if (TEACHER_VIEWS.includes(activeView) || activeView === 'teacher-dashboard') setActiveViewState('campus-hub');
+  }, [isTeacher, activeView]);
+
   // Navigating to a mode-specific view switches into that mode (Campus requires a .edu account)
   const setActiveView = (view: ViewType) => {
     if (CAMPUS_VIEWS.includes(view)) {

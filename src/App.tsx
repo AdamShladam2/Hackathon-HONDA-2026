@@ -77,6 +77,7 @@ const MainApp: React.FC = () => {
     hasChosenMode,
     isSignedIn,
     appMode,
+    isTeacher,
   } = useApp();
 
   const isNewCampusClassProject =
@@ -135,7 +136,7 @@ const MainApp: React.FC = () => {
         {activeView === 'course-posts' && <CoursePostsView />}
         {activeView === 'teacher-students' && <TeacherStudentsView />}
         {activeView === 'teacher-opportunities' && <TeacherOpportunitiesView />}
-        {activeView === 'teacher-integrity' && <TeacherIntegrityCheckView />}
+        {activeView === 'teacher-integrity' && isTeacher && <TeacherIntegrityCheckView />}
 
         {/* Work Hub projects open to students, inside the Campus section */}
         {activeView === 'opportunities' && <StudentOpportunitiesView />}
