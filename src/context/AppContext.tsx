@@ -24,6 +24,8 @@ import {
   CanvasCourse,
   CanvasClassmate,
   CanvasUserConnection,
+  TeamMember,
+  ProjectAttachedFile,
 } from '../types';
 import {
   loadSavedCanvasConnection,
@@ -221,7 +223,12 @@ interface AppContextType {
   loginAsStudent: (studentId?: string) => void;
 
   // Project Actions
-  addProject: (projectData: Omit<Project, 'id' | 'createdAt' | 'viewCount' | 'interestCount' | 'author' | 'teamMembers'>) => Project;
+  addProject: (
+    projectData: Omit<Project, 'id' | 'createdAt' | 'viewCount' | 'interestCount' | 'author' | 'teamMembers'> & {
+      teamMembers?: TeamMember[];
+      attachedFiles?: ProjectAttachedFile[];
+    }
+  ) => Project;
   addWorkProject: (projectData: Omit<Project, 'id' | 'createdAt' | 'viewCount' | 'interestCount' | 'author' | 'teamMembers'>) => Project;
   toggleInterest: (projectId: string) => void;
 
@@ -1364,21 +1371,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Add General Showcase Project
   const addProject = (
-    projectData: Omit<Project, 'id' | 'createdAt' | 'viewCount' | 'interestCount' | 'author' | 'teamMembers'>
+    projectData: Omit<Project, 'id' | 'createdAt' | 'viewCount' | 'interestCount' | 'author' | 'teamMembers'> & {
+      teamMembers?: TeamMember[];
+      attachedFiles?: ProjectAttachedFile[];
+    }
   ) => {
+    const authorContributionDesc =
+      projectData.teamMembers?.find((m) => m.id === currentUser.id)?.contributionDescription;
+
+    const defaultTeam: TeamMember[] = [
+      {
+        id: currentUser.id,
+        name: currentUser.name,
+        role: 'Project Creator & Lead',
+        avatar: currentUser.avatar,
+        identity: currentUser.identities[0] || 'Student',
+        contributionDescription:
+          authorContributionDesc || 'Project lead, architecture design, and core implementation.',
+      },
+    ];
+
+    const teamMembers: TeamMember[] =
+      projectData.teamMembers && projectData.teamMembers.length > 0
+        ? projectData.teamMembers
+        : defaultTeam;
+
     const newProject: Project = {
       ...projectData,
       id: `proj-${Date.now()}`,
       author: currentUser,
-      teamMembers: [
-        {
-          id: currentUser.id,
-          name: currentUser.name,
-          role: 'Project Creator',
-          avatar: currentUser.avatar,
-          identity: currentUser.identities[0] || 'Working professional',
-        },
-      ],
+      teamMembers,
+      attachedFiles: projectData.attachedFiles || [],
       interestCount: 1,
       userInterested: true,
       viewCount: 1,
@@ -1391,7 +1414,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setProjects((prev) => [newProject, ...prev]);
-    showToast(`"${newProject.title}" is now published to the public Showcase!`, 'success');
+    showToast(`"${newProject.title}" is now published to collabr!`, 'success');
     return newProject;
   };
 

@@ -26,9 +26,19 @@ export const ShowcaseGrid: React.FC<ShowcaseGridProps> = ({ onSelectProject }) =
 
   const [searchQuery, setSearchQuery] = useState('');
   const [hubFilter, setHubFilter] = useState<'all' | 'student' | 'professional' | 'opensource' | 'collaborators' | 'mentors'>('all');
+  const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [selectedProfessor, setSelectedProfessor] = useState<string>('all');
   const [selectedCodeAvailability, setSelectedCodeAvailability] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'views' | 'interest'>('newest');
+
+  const availableCourses = useMemo(() => {
+    return Array.from(new Set(projects.map((p) => p.courseCode).filter(Boolean))) as string[];
+  }, [projects]);
+
+  const availableProfessors = useMemo(() => {
+    return Array.from(new Set(projects.map((p) => p.professorName).filter(Boolean))) as string[];
+  }, [projects]);
 
   const allTags = useMemo(() => {
     const countMap: Record<string, number> = {};
@@ -70,6 +80,20 @@ export const ShowcaseGrid: React.FC<ShowcaseGridProps> = ({ onSelectProject }) =
           if (!project.seekingIndustryMentor && !project.hasMentor) return false;
         }
 
+        // Course filter
+        if (selectedCourse !== 'all') {
+          if (project.courseCode !== selectedCourse && project.courseName !== selectedCourse) {
+            return false;
+          }
+        }
+
+        // Professor filter
+        if (selectedProfessor !== 'all') {
+          if (project.professorName !== selectedProfessor) {
+            return false;
+          }
+        }
+
         // Search query
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
@@ -79,7 +103,9 @@ export const ShowcaseGrid: React.FC<ShowcaseGridProps> = ({ onSelectProject }) =
           const matchOrg = (project.author.organization || project.author.school || '').toLowerCase().includes(q);
           const matchTags = project.tags.some((t) => t.toLowerCase().includes(q));
           const matchRoles = (project.openRoles || []).some((r) => r.toLowerCase().includes(q));
-          if (!matchTitle && !matchSummary && !matchAuthor && !matchOrg && !matchTags && !matchRoles) {
+          const matchCourse = (project.courseCode || project.courseName || '').toLowerCase().includes(q);
+          const matchProf = (project.professorName || '').toLowerCase().includes(q);
+          if (!matchTitle && !matchSummary && !matchAuthor && !matchOrg && !matchTags && !matchRoles && !matchCourse && !matchProf) {
             return false;
           }
         }
@@ -111,6 +137,8 @@ export const ShowcaseGrid: React.FC<ShowcaseGridProps> = ({ onSelectProject }) =
   }, [
     projects,
     hubFilter,
+    selectedCourse,
+    selectedProfessor,
     searchQuery,
     selectedCodeAvailability,
     selectedTag,
@@ -120,12 +148,16 @@ export const ShowcaseGrid: React.FC<ShowcaseGridProps> = ({ onSelectProject }) =
   const hasActiveFilters =
     searchQuery.trim() !== '' ||
     hubFilter !== 'all' ||
+    selectedCourse !== 'all' ||
+    selectedProfessor !== 'all' ||
     selectedCodeAvailability !== 'all' ||
     selectedTag !== 'all';
 
   const resetFilters = () => {
     setSearchQuery('');
     setHubFilter('all');
+    setSelectedCourse('all');
+    setSelectedProfessor('all');
     setSelectedCodeAvailability('all');
     setSelectedTag('all');
     setSortBy('newest');
@@ -200,6 +232,74 @@ export const ShowcaseGrid: React.FC<ShowcaseGridProps> = ({ onSelectProject }) =
               <option value="views">Most viewed</option>
             </select>
           </div>
+        </div>
+
+        {/* University Course & Professor Filter Controls */}
+        <div className="p-2.5 bg-indigo-50/50 border border-indigo-100 rounded-lg flex flex-wrap items-center gap-3 text-xs">
+          <div className="flex items-center gap-1.5 font-bold text-indigo-950">
+            <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Course & Professor:</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <select
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              className="px-2.5 py-1 text-xs rounded-md bg-white border border-indigo-200 text-indigo-900 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="all">All Courses</option>
+              {availableCourses.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <select
+              value={selectedProfessor}
+              onChange={(e) => setSelectedProfessor(e.target.value)}
+              className="px-2.5 py-1 text-xs rounded-md bg-white border border-indigo-200 text-indigo-900 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="all">All Professors</option>
+              {availableProfessors.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {['CSE 3901', 'CSE 5521'].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setSelectedCourse(selectedCourse === c ? 'all' : c)}
+                className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+                  selectedCourse === c
+                    ? 'bg-indigo-600 text-white font-bold'
+                    : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
+          {(selectedCourse !== 'all' || selectedProfessor !== 'all') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCourse('all');
+                setSelectedProfessor('all');
+              }}
+              className="text-[11px] text-indigo-700 hover:text-indigo-900 font-semibold underline cursor-pointer ml-auto"
+            >
+              Reset course/prof
+            </button>
+          )}
         </div>
 
         {/* Required Showcase Filters: All, Student, Professional, Open-Source, Looking for Collaborators, Seeking Mentors */}

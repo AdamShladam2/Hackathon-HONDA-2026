@@ -269,6 +269,27 @@ export interface StudentTeam {
   evidenceSubmitted: WorkEvidence[];
 }
 
+export interface ProjectAttachedFile {
+  id: string;
+  name: string;
+  size?: string;
+  type?: string;
+  url: string;
+  labeledStudentId?: string;
+  labeledStudentName?: string;
+  description?: string;
+  uploadedAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  avatar: string;
+  identity?: UserIdentity;
+  contributionDescription?: string; // Description of what part of the project this student worked on
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -286,11 +307,14 @@ export interface Project {
   demoVideoUrl?: string;
   liveDemoUrl?: string;
   author: Author;
-  teamMembers: { id: string; name: string; role: string; avatar: string; identity?: UserIdentity }[];
+  teamMembers: TeamMember[];
   interestCount: number;
   userInterested?: boolean;
   viewCount: number;
   createdAt: string;
+
+  // Attached deliverables & labeled student files
+  attachedFiles?: ProjectAttachedFile[];
 
   // Hub identification
   hubType?: HubType; // 'campus' | 'work'
@@ -298,7 +322,10 @@ export interface Project {
   // Campus & Teacher specific
   isClassProject?: boolean;
   courseName?: string;
+  courseCode?: string; // e.g. "CSE 3901", "CSE 5521", "MECHENG 481", "CS 188"
   classCode?: string;
+  professorName?: string; // e.g. "Dr. Rajiv Ramnath", "Dr. Evelyn Vance"
+  professorEmail?: string;
   isTeacherManaged?: boolean;
   assignmentId?: string;
   allowPublicShowcase?: boolean;

@@ -15,6 +15,9 @@ import {
   CheckCircle2,
   HelpCircle,
   ShieldCheck,
+  Paperclip,
+  BookOpen,
+  X,
 } from 'lucide-react';
 import { Project } from '../types';
 
@@ -32,6 +35,8 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'campus' | 'industry' | 'autonomous'>('all');
+  const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [selectedProfessor, setSelectedProfessor] = useState<string>('all');
 
   const allProjects = [...classProjects, ...projects];
 
@@ -40,17 +45,40 @@ export const DiscoverView: React.FC = () => {
     allProjects.find((p) => p.id === 'proj-1' || p.title.toLowerCase().includes('rover')) ||
     allProjects[0];
 
+  // Derive available courses & professors
+  const availableCourses = Array.from(
+    new Set(allProjects.map((p) => p.courseCode).filter(Boolean))
+  ) as string[];
+
+  const availableProfessors = Array.from(
+    new Set(allProjects.map((p) => p.professorName).filter(Boolean))
+  ) as string[];
+
   const filteredProjects = allProjects.filter((p) => {
     const projectSkills = p.tags || p.skills || p.skillsRequired || [];
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
       searchQuery === '' ||
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      projectSkills.some((s: string) => s.toLowerCase().includes(searchQuery.toLowerCase()));
+      p.title.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      (p.courseCode && p.courseCode.toLowerCase().includes(q)) ||
+      (p.courseName && p.courseName.toLowerCase().includes(q)) ||
+      (p.professorName && p.professorName.toLowerCase().includes(q)) ||
+      projectSkills.some((s: string) => s.toLowerCase().includes(q));
 
     if (!matchesSearch) return false;
 
-    if (selectedCategory === 'campus') return p.hubType === 'campus' || Boolean(p.school || p.author.school || p.courseName);
+    // Course filter
+    if (selectedCourse !== 'all') {
+      if (p.courseCode !== selectedCourse && p.courseName !== selectedCourse) return false;
+    }
+
+    // Professor filter
+    if (selectedProfessor !== 'all') {
+      if (p.professorName !== selectedProfessor) return false;
+    }
+
+    if (selectedCategory === 'campus') return p.hubType === 'campus' || Boolean(p.school || p.author.school || p.courseName || p.courseCode);
     if (selectedCategory === 'industry') return p.hubType === 'work';
     if (selectedCategory === 'autonomous')
       return (
@@ -90,7 +118,7 @@ export const DiscoverView: React.FC = () => {
 
           {/* Direct Purpose Explanation */}
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-normal max-w-2xl mx-auto">
-            SkillSink helps students and developers discover active initiatives, connect with proven collaborators, and build an authentic track record of verified individual contributions.
+            collabr helps students and developers discover active initiatives, connect with proven collaborators, and build an authentic track record of verified individual contributions.
           </p>
 
           {/* One Clear Primary Action + Secondary Tour */}
@@ -267,32 +295,113 @@ export const DiscoverView: React.FC = () => {
       {/* Discovery Feed Section */}
       <section id="project-discovery-section" className="space-y-6 pt-4">
         {/* Search & Category Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search projects by title, skill, or discipline..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
-            />
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by title, course, professor, or skill..."
+                className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    selectedCategory === cat.id
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-            {categories.map((cat) => (
+          {/* Dedicated University Course & Professor Filter Bar */}
+          <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-indigo-950 font-bold shrink-0">
+              <GraduationCap className="w-4 h-4 text-indigo-600" />
+              <span>University Filter:</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 flex-1">
+              {/* Course Selector */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-600">Course:</span>
+                <select
+                  value={selectedCourse}
+                  onChange={(e) => setSelectedCourse(e.target.value)}
+                  className="px-2.5 py-1 text-xs rounded-lg bg-white border border-indigo-200 text-indigo-950 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="all">All Courses</option>
+                  {availableCourses.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Professor Selector */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-600">Professor:</span>
+                <select
+                  value={selectedProfessor}
+                  onChange={(e) => setSelectedProfessor(e.target.value)}
+                  className="px-2.5 py-1 text-xs rounded-lg bg-white border border-indigo-200 text-indigo-950 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="all">All Professors</option>
+                  {availableProfessors.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Quick Course Pills */}
+              <div className="flex items-center gap-1 flex-wrap">
+                {['CSE 3901', 'CSE 5521', 'ENGR 1181'].map((coursePill) => (
+                  <button
+                    key={coursePill}
+                    type="button"
+                    onClick={() =>
+                      setSelectedCourse(selectedCourse === coursePill ? 'all' : coursePill)
+                    }
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+                      selectedCourse === coursePill
+                        ? 'bg-indigo-600 text-white font-bold'
+                        : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100/60'
+                    }`}
+                  >
+                    {coursePill}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {(selectedCourse !== 'all' || selectedProfessor !== 'all' || searchQuery.trim() !== '') && (
               <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                  selectedCategory === cat.id
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
+                type="button"
+                onClick={() => {
+                  setSelectedCourse('all');
+                  setSelectedProfessor('all');
+                  setSearchQuery('');
+                }}
+                className="inline-flex items-center gap-1 text-[11px] text-indigo-700 hover:text-indigo-900 font-semibold px-2 py-1 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors self-start md:self-auto cursor-pointer"
               >
-                {cat.label}
+                <X className="w-3 h-3" />
+                <span>Reset Filters</span>
               </button>
-            ))}
+            )}
           </div>
         </div>
 
@@ -320,6 +429,28 @@ export const DiscoverView: React.FC = () => {
                       {project.discipline || project.school || project.author.school || project.courseName || 'General'}
                     </span>
                   </div>
+
+                  {/* Course & Professor Bar inside card */}
+                  {(project.courseCode || project.professorName) && (
+                    <div className="flex items-center gap-1.5 flex-wrap text-[11px] bg-slate-50 border border-slate-200/80 p-1.5 rounded-lg text-slate-700">
+                      {project.courseCode && (
+                        <span className="font-bold font-mono px-1.5 py-0.2 rounded bg-indigo-50 border border-indigo-200 text-indigo-900">
+                          {project.courseCode}
+                        </span>
+                      )}
+                      {project.professorName && (
+                        <span className="text-slate-600 truncate">
+                          Prof: <strong className="font-semibold text-slate-800">{project.professorName.split(' ').slice(-1)[0]}</strong>
+                        </span>
+                      )}
+                      {project.attachedFiles && project.attachedFiles.length > 0 && (
+                        <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded font-medium">
+                          <Paperclip className="w-2.5 h-2.5 text-blue-600" />
+                          <span>{project.attachedFiles.length} file{project.attachedFiles.length > 1 ? 's' : ''}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <h3
                     onClick={() => setSelectedProject(project)}

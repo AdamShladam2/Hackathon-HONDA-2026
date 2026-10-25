@@ -34,6 +34,7 @@ export const DemoFlowBar: React.FC = () => {
     allDemoAccounts,
     showToast,
     canvasConnection,
+    openShareModal,
   } = useApp();
 
   const [isExpanded, setIsExpanded] = useState(true);
@@ -188,6 +189,26 @@ export const DemoFlowBar: React.FC = () => {
         showToast('Viewing enrolled Canvas class rosters & peer team recruitment pitches!', 'success');
       },
     },
+    {
+      num: 14,
+      title: 'Post & Label Files',
+      desc: 'Course, Prof & Roles',
+      done: true,
+      action: () => {
+        loginAsStudent('user_alex_chen');
+        openShareModal({
+          title: 'CSE 3901 Cloud Microservices Architecture & Telemetry Pipeline',
+          courseCode: 'CSE 3901',
+          courseName: 'Web Applications & Cloud Systems',
+          professorName: 'Dr. Rajiv Ramnath',
+          summary: 'High-throughput event stream processing with Redis cache invalidation and distributed logging.',
+          description: 'Designed for Ohio State CSE 3901 under Dr. Rajiv Ramnath. Implemented microservice mesh, JWT authorization, and WebSocket real-time push.',
+          tags: ['React', 'TypeScript', 'Node.js', 'Distributed Systems'],
+          isClassProject: true,
+        });
+        showToast('Opened Post Project modal with Course, Professor, student-labeled deliverables & contribution inputs!', 'info');
+      },
+    },
   ];
 
   return (
@@ -197,7 +218,7 @@ export const DemoFlowBar: React.FC = () => {
           <div className="flex items-center gap-3">
             <span className="font-bold text-xs text-blue-400 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Judge Demo Tour (13 Steps):</span>
+              <span>Judge Demo Tour (14 Steps):</span>
             </span>
             <span className="text-[11px] text-slate-400 font-mono hidden md:inline">
               Active: <strong className="text-white">{currentUser.name}</strong> ({currentUser.identities[0]})

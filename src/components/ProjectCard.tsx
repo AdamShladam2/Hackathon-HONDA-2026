@@ -13,6 +13,7 @@ import {
   GraduationCap,
   ShieldCheck,
   Briefcase,
+  Paperclip,
 } from 'lucide-react';
 
 interface ProjectCardProps {
@@ -102,6 +103,28 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onSelect }) =
             </div>
           )}
         </div>
+
+        {/* Course & Professor metadata banner if academic project */}
+        {(project.courseCode || project.professorName || (project.attachedFiles && project.attachedFiles.length > 0)) && (
+          <div className="flex items-center gap-1.5 flex-wrap text-[11px] mb-2 font-medium">
+            {project.courseCode && (
+              <span className="font-bold font-mono px-1.5 py-0.2 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded">
+                {project.courseCode}
+              </span>
+            )}
+            {project.professorName && (
+              <span className="text-slate-500 truncate">
+                Prof: <strong className="font-semibold text-slate-700">{project.professorName.split(' ').slice(-1)[0]}</strong>
+              </span>
+            )}
+            {project.attachedFiles && project.attachedFiles.length > 0 && (
+              <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded font-medium">
+                <Paperclip className="w-2.5 h-2.5 text-blue-600" />
+                <span>{project.attachedFiles.length} file{project.attachedFiles.length > 1 ? 's' : ''}</span>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Title */}
         <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 mb-1.5">

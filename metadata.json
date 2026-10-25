@@ -1,6 +1,6 @@
 {
-  "name": "CampusForge - Student Project Showcase",
-  "description": "Cross-campus project showcase, student portfolio sharing, and team collaboration network.",
+  "name": "collabr",
+  "description": "University project showcase, student portfolio sharing, course & professor search, and team collaboration network.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

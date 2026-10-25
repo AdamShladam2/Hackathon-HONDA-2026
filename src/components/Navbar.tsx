@@ -41,12 +41,12 @@ export const Navbar: React.FC = () => {
             onClick={() => setActiveView('discover')}
             className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm transition-transform group-hover:scale-105">
-              SK
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-sm transition-transform group-hover:scale-105">
+              co
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0">
-                SkillSink
+              <span className="text-xl font-black tracking-tight text-slate-900 whitespace-nowrap shrink-0 lowercase">
+                collabr
               </span>
             </div>
           </button>

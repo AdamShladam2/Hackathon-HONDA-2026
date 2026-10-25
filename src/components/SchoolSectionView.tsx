@@ -19,6 +19,9 @@ import {
   Layers,
   ChevronRight,
   CheckCircle2,
+  Search,
+  Filter,
+  X,
 } from 'lucide-react';
 import { EvidenceType } from '../types';
 
@@ -45,6 +48,45 @@ export const SchoolSectionView: React.FC = () => {
   const [evidenceDesc, setEvidenceDesc] = useState('Authored Section 3: REST API Contracts and Section 4: Concurrency Isolation Model. Documented optimistic lock rollback handling.');
   const [evidenceSections, setEvidenceSections] = useState('Section 3.2, Section 4.1');
   const [selectedAssignId, setSelectedAssignId] = useState(classAssignments[0]?.id || '');
+
+  // Course & Professor Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [courseFilter, setCourseFilter] = useState('all');
+  const [professorFilter, setProfessorFilter] = useState('all');
+
+  // Filter assignments
+  const filteredAssignments = classAssignments.filter((assign) => {
+    const q = searchQuery.toLowerCase();
+    const matchSearch =
+      searchQuery === '' ||
+      assign.title.toLowerCase().includes(q) ||
+      assign.className.toLowerCase().includes(q) ||
+      assign.classCode.toLowerCase().includes(q) ||
+      assign.teacherName.toLowerCase().includes(q) ||
+      assign.description.toLowerCase().includes(q);
+
+    if (!matchSearch) return false;
+    if (courseFilter !== 'all' && assign.classCode !== courseFilter) return false;
+    if (professorFilter !== 'all' && assign.teacherName !== professorFilter) return false;
+    return true;
+  });
+
+  // Filter student submissions
+  const filteredClassProjects = classProjects.filter((proj) => {
+    const q = searchQuery.toLowerCase();
+    const matchSearch =
+      searchQuery === '' ||
+      proj.title.toLowerCase().includes(q) ||
+      (proj.courseCode && proj.courseCode.toLowerCase().includes(q)) ||
+      (proj.courseName && proj.courseName.toLowerCase().includes(q)) ||
+      (proj.professorName && proj.professorName.toLowerCase().includes(q)) ||
+      proj.description.toLowerCase().includes(q);
+
+    if (!matchSearch) return false;
+    if (courseFilter !== 'all' && proj.courseCode !== courseFilter) return false;
+    if (professorFilter !== 'all' && proj.professorName !== professorFilter) return false;
+    return true;
+  });
 
   const handleSubmitEvidence = (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,13 +217,104 @@ export const SchoolSectionView: React.FC = () => {
         </div>
       </div>
 
+      {/* Course & Professor Search & Filter Bar */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search university projects by course code, professor, or topic..."
+              className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-medium"
+            >
+              <option value="all">All Courses</option>
+              <option value="CSE 3901">CSE 3901</option>
+              <option value="CSE 5521">CSE 5521</option>
+              <option value="ECE 5020">ECE 5020</option>
+              <option value="ENGR 1181">ENGR 1181</option>
+            </select>
+
+            <select
+              value={professorFilter}
+              onChange={(e) => setProfessorFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-medium"
+            >
+              <option value="all">All Professors</option>
+              <option value="Dr. Rajiv Ramnath">Dr. Rajiv Ramnath</option>
+              <option value="Dr. Evelyn Vance">Dr. Evelyn Vance</option>
+              <option value="Dr. Sarah Lin">Dr. Sarah Lin</option>
+              <option value="Prof. Robert Hayes">Prof. Robert Hayes</option>
+            </select>
+
+            {(searchQuery || courseFilter !== 'all' || professorFilter !== 'all') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setCourseFilter('all');
+                  setProfessorFilter('all');
+                }}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Course Selector Pills */}
+        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 flex-wrap text-xs">
+          <span className="text-[11px] font-semibold text-slate-500">Quick Courses:</span>
+          {['CSE 3901', 'CSE 5521', 'ENGR 1181'].map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCourseFilter(courseFilter === c ? 'all' : c)}
+              className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+                courseFilter === c
+                  ? 'bg-indigo-600 text-white font-bold'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+          <span className="text-slate-300 mx-1">·</span>
+          <span className="text-[11px] font-semibold text-slate-500">Professors:</span>
+          {['Dr. Rajiv Ramnath', 'Dr. Evelyn Vance'].map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setProfessorFilter(professorFilter === p ? 'all' : p)}
+              className={`px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
+                professorFilter === p
+                  ? 'bg-purple-600 text-white font-bold'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {p.split(' ').slice(-1)[0]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* SECTION 1: TEACHER-MANAGED CLASS ASSIGNMENTS (Core Requirement) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-indigo-600" />
-              Teacher-Managed Academic Projects ({classAssignments.length})
+              Teacher-Managed Academic Projects ({filteredAssignments.length})
             </h2>
             <p className="text-xs text-slate-500">
               Registered by Prof. Robert Hayes • Form teams and submit individual deliverables
@@ -197,7 +330,7 @@ export const SchoolSectionView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {classAssignments.map((assignment) => (
+          {filteredAssignments.map((assignment) => (
             <div
               key={assignment.id}
               className="bg-white border-2 border-indigo-100 hover:border-indigo-300 rounded-2xl p-5 shadow-sm space-y-4 transition-all"
@@ -295,13 +428,13 @@ export const SchoolSectionView: React.FC = () => {
       <div className="space-y-4 pt-4 border-t border-slate-200">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-900">
-            Student Coursework Submissions ({classProjects.length})
+            Student Coursework Submissions ({filteredClassProjects.length})
           </h2>
           <span className="text-xs text-slate-400">Ohio State CSE Dept</span>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {classProjects.map((proj) => (
+          {filteredClassProjects.map((proj) => (
             <div
               key={proj.id}
               className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5 transition-all"

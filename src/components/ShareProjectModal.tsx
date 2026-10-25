@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Project, CodeAvailability, ProjectStatus, GitHubRepo } from '../types';
+import React, { useState } from 'react';
+import { Project, CodeAvailability, ProjectStatus, GitHubRepo, ProjectAttachedFile, TeamMember } from '../types';
 import { useApp } from '../context/AppContext';
 import {
   X,
@@ -15,11 +15,27 @@ import {
   Video,
   Globe,
   CheckCircle2,
+  FileText,
+  Paperclip,
+  GraduationCap,
+  Users,
+  BookOpen,
+  UserCheck,
+  FileCode,
 } from 'lucide-react';
 
 interface ShareProjectModalProps {
   onClose: () => void;
   initialData?: Partial<Project>;
+}
+
+interface FormTeamMember {
+  id: string;
+  name: string;
+  role: string;
+  avatar?: string;
+  identity?: string;
+  contributionDescription: string;
 }
 
 export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, initialData }) => {
@@ -30,6 +46,8 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
     openGitHubModal,
     addProject,
     showToast,
+    canvasConnection,
+    allCanvasClassmates,
   } = useApp();
 
   // Form State
@@ -45,17 +63,109 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
   );
   const [newUseCaseInput, setNewUseCaseInput] = useState('');
 
+  // University Course & Professor Information
+  const isClassProject = !!initialData?.isClassProject;
+  const [courseCode, setCourseCode] = useState(
+    initialData?.courseCode || (isClassProject ? 'CSE 3901' : 'CSE 3901')
+  );
+  const [courseName, setCourseName] = useState(
+    initialData?.courseName || (isClassProject ? 'Web Applications & Cloud Systems' : 'Web Applications & Cloud Systems')
+  );
+  const [professorName, setProfessorName] = useState(
+    initialData?.professorName || (isClassProject ? 'Dr. Rajiv Ramnath' : 'Dr. Rajiv Ramnath')
+  );
+
+  // Team Members with Contribution Descriptions ("What part of the project did this student work on?")
+  const [teamMembers, setTeamMembers] = useState<FormTeamMember[]>(() => {
+    if (initialData?.teamMembers && initialData.teamMembers.length > 0) {
+      return initialData.teamMembers.map((m) => ({
+        id: m.id,
+        name: m.name,
+        role: m.role || 'Team Member',
+        avatar: m.avatar || currentUser.avatar,
+        identity: m.identity || 'Student',
+        contributionDescription:
+          m.contributionDescription ||
+          (m.id === currentUser.id
+            ? 'Architecture design, data schema, and core project implementation.'
+            : 'Contributed to deliverables, testing, and interface integration.'),
+      }));
+    }
+    return [
+      {
+        id: currentUser.id,
+        name: currentUser.name,
+        role: 'Project Lead',
+        avatar: currentUser.avatar,
+        identity: currentUser.identities[0] || 'Student',
+        contributionDescription:
+          'Architecture design, data schema, and core project implementation.',
+      },
+      {
+        id: 'user-teammate-2',
+        name: 'Jordan Taylor',
+        role: 'Frontend & UI Specialist',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        identity: 'Student',
+        contributionDescription:
+          'Developed interactive UI components, state management hooks, and user experience flow.',
+      },
+    ];
+  });
+
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState('');
+  const [newMemberContribution, setNewMemberContribution] = useState('');
+
+  // Attached Files / Deliverables labeled to students
+  const [attachedFiles, setAttachedFiles] = useState<ProjectAttachedFile[]>(
+    initialData?.attachedFiles && initialData.attachedFiles.length > 0
+      ? initialData.attachedFiles
+      : [
+          {
+            id: 'file-sample-1',
+            name: 'CSE3901_Final_Architecture_Specification.pdf',
+            size: '2.4 MB',
+            type: 'PDF Document',
+            url: '#',
+            labeledStudentId: currentUser.id,
+            labeledStudentName: currentUser.name,
+            description: 'System architecture diagram, data schema, and API contracts.',
+            uploadedAt: new Date().toISOString(),
+          },
+          {
+            id: 'file-sample-2',
+            name: 'Telemetry_Parser_Benchmark_Report.pdf',
+            size: '1.2 MB',
+            type: 'PDF Document',
+            url: '#',
+            labeledStudentId: 'user-teammate-2',
+            labeledStudentName: 'Jordan Taylor',
+            description: 'Load test results, latency graphs, and UI performance benchmarks.',
+            uploadedAt: new Date().toISOString(),
+          },
+        ]
+  );
+
+  // New File Inputs
+  const [fileNameInput, setFileNameInput] = useState('');
+  const [fileTypeInput, setFileTypeInput] = useState('PDF Document');
+  const [fileSizeInput, setFileSizeInput] = useState('1.5 MB');
+  const [fileNoteInput, setFileNoteInput] = useState('');
+  const [fileStudentIdInput, setFileStudentIdInput] = useState(currentUser.id);
+
   // Media
   const [screenshotUrl, setScreenshotUrl] = useState('');
   const [liveDemoUrl, setLiveDemoUrl] = useState(initialData?.liveDemoUrl || '');
   const [demoVideoUrl, setDemoVideoUrl] = useState(initialData?.demoVideoUrl || '');
 
   // Tags
-  const [tags, setTags] = useState<string[]>(initialData?.tags || ['React', 'TypeScript', 'Web']);
+  const [tags, setTags] = useState<string[]>(
+    initialData?.tags || ['React', 'TypeScript', 'Web Applications', 'Engineering']
+  );
   const [newTagInput, setNewTagInput] = useState('');
 
   // Code sharing choice
-  const isClassProject = !!initialData?.isClassProject;
   const [codeAvailability, setCodeAvailability] = useState<CodeAvailability>(
     isClassProject ? 'on_request' : initialData?.codeAvailability || 'public'
   );
@@ -71,7 +181,7 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
     initialData?.status || 'Looking for collaborators'
   );
   const [openRoles, setOpenRoles] = useState<string[]>(
-    initialData?.openRoles || ['Frontend dev', 'UI designer']
+    initialData?.openRoles || ['Data Analyst', 'Frontend Developer']
   );
   const [newRoleInput, setNewRoleInput] = useState('');
 
@@ -120,6 +230,77 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
     setOpenRoles(openRoles.filter((r) => r !== roleToRemove));
   };
 
+  // Add Teammate
+  const handleAddTeammate = () => {
+    if (!newMemberName.trim()) {
+      showToast('Please enter the student teammate name.', 'warning');
+      return;
+    }
+    const newMember: FormTeamMember = {
+      id: `member-${Date.now()}`,
+      name: newMemberName.trim(),
+      role: newMemberRole.trim() || 'Contributor',
+      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+      identity: 'Student',
+      contributionDescription:
+        newMemberContribution.trim() || 'Assisted with module development and verification testing.',
+    };
+    setTeamMembers([...teamMembers, newMember]);
+    setNewMemberName('');
+    setNewMemberRole('');
+    setNewMemberContribution('');
+    showToast(`Added ${newMember.name} to the team roster`, 'info');
+  };
+
+  const handleRemoveTeammate = (id: string) => {
+    if (id === currentUser.id) {
+      showToast('You cannot remove yourself as project creator.', 'warning');
+      return;
+    }
+    setTeamMembers(teamMembers.filter((m) => m.id !== id));
+  };
+
+  const handleUpdateContribution = (id: string, newDesc: string) => {
+    setTeamMembers(
+      teamMembers.map((m) => (m.id === id ? { ...m, contributionDescription: newDesc } : m))
+    );
+  };
+
+  // Add Attached File Labeled to a Student
+  const handleAddAttachedFile = () => {
+    if (!fileNameInput.trim()) {
+      showToast('Please enter the deliverable or file name.', 'warning');
+      return;
+    }
+
+    let labeledName = 'Whole Team Deliverable';
+    if (fileStudentIdInput !== 'team') {
+      const target = teamMembers.find((m) => m.id === fileStudentIdInput);
+      if (target) labeledName = target.name;
+    }
+
+    const newFile: ProjectAttachedFile = {
+      id: `file-${Date.now()}`,
+      name: fileNameInput.trim(),
+      type: fileTypeInput,
+      size: fileSizeInput || '1.5 MB',
+      url: '#',
+      labeledStudentId: fileStudentIdInput,
+      labeledStudentName: labeledName,
+      description: fileNoteInput.trim() || undefined,
+      uploadedAt: new Date().toISOString(),
+    };
+
+    setAttachedFiles([...attachedFiles, newFile]);
+    setFileNameInput('');
+    setFileNoteInput('');
+    showToast(`Attached "${newFile.name}" attributed to ${labeledName}!`, 'success');
+  };
+
+  const handleRemoveFile = (fileId: string) => {
+    setAttachedFiles(attachedFiles.filter((f) => f.id !== fileId));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -161,6 +342,16 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
           'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
         ];
 
+    // Format team members
+    const finalTeamMembers: TeamMember[] = teamMembers.map((m) => ({
+      id: m.id,
+      name: m.name,
+      role: m.role,
+      avatar: m.avatar || currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      identity: (m.identity as any) || 'Student',
+      contributionDescription: m.contributionDescription,
+    }));
+
     addProject({
       title: title.trim(),
       summary: summary.trim(),
@@ -177,11 +368,24 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
       liveDemoUrl: liveDemoUrl.trim() || undefined,
       demoVideoUrl: demoVideoUrl.trim() || undefined,
       isClassProject,
-      courseName: initialData?.courseName,
+      courseCode: courseCode.trim() || undefined,
+      courseName: courseName.trim() || undefined,
+      professorName: professorName.trim() || undefined,
+      attachedFiles,
+      teamMembers: finalTeamMembers,
     });
 
     onClose();
   };
+
+  // Quick course selection presets
+  const coursePresets = [
+    { code: 'CSE 3901', name: 'Web Applications & Cloud Systems', prof: 'Dr. Rajiv Ramnath' },
+    { code: 'CSE 5521', name: 'Survey of Artificial Intelligence', prof: 'Dr. Evelyn Vance' },
+    { code: 'ECE 5020', name: 'Mixed Signal VLSI & Embedded Systems', prof: 'Prof. Robert Hayes' },
+    { code: 'ENGR 1181', name: 'Engineering Fundamentals & Design', prof: 'Dr. Sarah Lin' },
+    { code: 'CS 188', name: 'Introduction to Artificial Intelligence', prof: 'Prof. Pieter Abbeel' },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
@@ -189,11 +393,16 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Share a Project to the Showcase</h2>
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-md bg-blue-600 text-white font-extrabold text-[11px] flex items-center justify-center shadow-xs">
+                co
+              </span>
+              <h2 className="text-lg font-bold text-slate-900">Post a Project on collabr</h2>
+            </div>
             <p className="text-xs text-slate-500">
               {isClassProject
-                ? `Publishing coursework submission from ${initialData?.courseName || 'Class'}`
-                : 'Visible to students and faculty across all universities.'}
+                ? `Publishing coursework submission from ${courseName || 'Course'}`
+                : 'Share your work with university peers, professors, and cross-campus collaborators.'}
             </p>
           </div>
           <button
@@ -221,7 +430,82 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
             </div>
           )}
 
-          {/* Title, Summary & Description */}
+          {/* Section 1: Course & Professor Information */}
+          <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-indigo-950 font-bold text-xs uppercase tracking-wider">
+                <GraduationCap className="w-4 h-4 text-indigo-600" />
+                <span>University Course & Professor (Optional for Academic Projects)</span>
+              </div>
+              <span className="text-[11px] text-indigo-700 font-medium">Enables course & professor search</span>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[11px] font-semibold text-slate-500">Quick fill:</span>
+              {coursePresets.map((preset) => (
+                <button
+                  key={preset.code}
+                  type="button"
+                  onClick={() => {
+                    setCourseCode(preset.code);
+                    setCourseName(preset.name);
+                    setProfessorName(preset.prof);
+                  }}
+                  className={`text-[11px] px-2 py-0.5 rounded-md font-medium border transition-colors cursor-pointer ${
+                    courseCode === preset.code
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50'
+                  }`}
+                >
+                  {preset.code} ({preset.prof.split(' ').slice(-1)[0]})
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Course Code
+                </label>
+                <input
+                  type="text"
+                  value={courseCode}
+                  onChange={(e) => setCourseCode(e.target.value)}
+                  placeholder="e.g. CSE 3901"
+                  className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Course Name
+                </label>
+                <input
+                  type="text"
+                  value={courseName}
+                  onChange={(e) => setCourseName(e.target.value)}
+                  placeholder="e.g. Web Applications & Cloud Systems"
+                  className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Professor / Instructor
+                </label>
+                <input
+                  type="text"
+                  value={professorName}
+                  onChange={(e) => setProfessorName(e.target.value)}
+                  placeholder="e.g. Dr. Rajiv Ramnath"
+                  className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Title, Summary & Description */}
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
@@ -229,393 +513,453 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
               </label>
               <input
                 type="text"
+                required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., BuckeyeRover Autonomous Terrain Navigator"
-                className="w-full text-sm px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                required
+                className="w-full text-sm font-semibold px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                One-Line Summary *
+                One-Sentence Hook / Summary *
               </label>
               <input
                 type="text"
+                required
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
-                placeholder="A concise, punchy description shown on project cards (max 120 characters)"
-                className="w-full text-sm px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                required
+                placeholder="e.g., Quad-wheel autonomous planetary rover with ROS2 telemetry, lidar mapping, and 3D web monitor."
+                className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                Full Description *
+                Detailed Technical Overview & Architecture *
               </label>
               <textarea
-                rows={4}
+                required
+                rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detail the technical architecture, problem statement, key algorithms, benchmarks, or experimental results..."
-                className="w-full text-xs sm:text-sm p-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"
-                required
+                placeholder="Explain the background, system architecture, key challenges solved, hardware/software stack, and performance benchmarks..."
+                className="w-full text-xs px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          {/* Section: What it does & How to use it */}
-          <div className="space-y-4 pt-2 border-t border-slate-100">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 mb-1">
-                What it does / How to use it
-              </h3>
-              <p className="text-xs text-slate-500 mb-3">
-                Explain the real-world utility, user interaction steps, and intended audience.
-              </p>
+          {/* Section 3: Students & What Part Each Worked On */}
+          <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-700" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-950">
+                  Student Team & Individual Contribution Descriptions
+                </h3>
+              </div>
+              <span className="text-[11px] text-emerald-800 font-medium">
+                Specify what part of the project each student worked on
+              </span>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Workflow & How to Use It
-              </label>
-              <textarea
-                rows={2}
-                value={whatItDoes}
-                onChange={(e) => setWhatItDoes(e.target.value)}
-                placeholder="Describe what a user does: e.g., 'Connects to ROS2 topic /camera/depth, registers 3D point cloud, and generates local spline trajectories.'"
-                className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              />
+            <div className="space-y-3">
+              {teamMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={member.avatar}
+                        alt={member.name}
+                        className="w-7 h-7 rounded-full object-cover border border-slate-200"
+                      />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-900">{member.name}</span>
+                          {member.id === currentUser.id && (
+                            <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-semibold">
+                              You
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-500">{member.role}</span>
+                      </div>
+                    </div>
+
+                    {member.id !== currentUser.id && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTeammate(member.id)}
+                        className="text-slate-400 hover:text-rose-600 p-1 transition-colors cursor-pointer"
+                        title="Remove student from team"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Student Contribution Description Input */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      What part of the project did {member.name.split(' ')[0]} work on?
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={member.contributionDescription}
+                      onChange={(e) => handleUpdateContribution(member.id, e.target.value)}
+                      placeholder={`e.g. Lead for hardware telemetry integration, authored Kalman filter algorithm, and created the ROS2 communication bridge...`}
+                      className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800"
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Target Audience / Who it is for
-              </label>
+            {/* Add Teammate Input Subform */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+              <span className="text-xs font-bold text-slate-800 block">
+                + Add Another Student Teammate
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  placeholder="Student Name (e.g. Sam Patel)"
+                  className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg"
+                />
+                <input
+                  type="text"
+                  value={newMemberRole}
+                  onChange={(e) => setNewMemberRole(e.target.value)}
+                  placeholder="Role (e.g. Embedded Firmware Engineer)"
+                  className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg"
+                />
+              </div>
               <input
                 type="text"
-                value={targetAudience}
-                onChange={(e) => setTargetAudience(e.target.value)}
-                placeholder="e.g., Robotics teams, STEM researchers, student developers"
-                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                value={newMemberContribution}
+                onChange={(e) => setNewMemberContribution(e.target.value)}
+                placeholder="What part did they work on? (e.g. Microcontroller I/O and motor driver circuit design)"
+                className="w-full text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg"
               />
+              <button
+                type="button"
+                onClick={handleAddTeammate}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Student to Team Roster</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Section 4: Attach Files & Label to Students */}
+          <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Paperclip className="w-4 h-4 text-blue-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-950">
+                  Attached Deliverables & Project Files
+                </h3>
+              </div>
+              <span className="text-[11px] text-blue-800 font-medium">
+                Each file can be labeled to a specific student
+              </span>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Primary Use Cases
-              </label>
-              <div className="space-y-2 mb-2">
-                {useCases.map((uc, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200 text-xs">
-                    <span className="text-slate-800">› {uc}</span>
+            {/* List of currently attached files */}
+            {attachedFiles.length > 0 ? (
+              <div className="space-y-2">
+                {attachedFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-2xs"
+                  >
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <div className="p-2 rounded-lg bg-blue-50 text-blue-600 shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-slate-900 truncate">
+                            {file.name}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded font-mono">
+                            {file.type} · {file.size}
+                          </span>
+                        </div>
+                        {file.description && (
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                            {file.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] text-slate-400">Attributed to:</span>
+                          <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md inline-flex items-center gap-1">
+                            <UserCheck className="w-3 h-3 text-emerald-600" />
+                            {file.labeledStudentName || 'Team'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={() => removeUseCase(idx)}
-                      className="text-slate-400 hover:text-rose-600 transition-colors"
+                      onClick={() => handleRemoveFile(file.id)}
+                      className="text-slate-400 hover:text-rose-600 p-1 self-end sm:self-center transition-colors cursor-pointer"
+                      title="Remove file"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2">
+            ) : (
+              <p className="text-xs text-slate-500 italic">No files attached yet.</p>
+            )}
+
+            {/* Add File Form */}
+            <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3">
+              <span className="text-xs font-bold text-slate-900 block">
+                + Attach a New File or Deliverable
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                    File / Deliverable Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={fileNameInput}
+                    onChange={(e) => setFileNameInput(e.target.value)}
+                    placeholder="e.g. CSE3901_Final_Report.pdf or Telemetry_Data.csv"
+                    className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                    File Type
+                  </label>
+                  <select
+                    value={fileTypeInput}
+                    onChange={(e) => setFileTypeInput(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
+                  >
+                    <option value="PDF Document">PDF Document</option>
+                    <option value="Source Code Archive">Source Code Archive</option>
+                    <option value="Dataset / CSV">Dataset / CSV</option>
+                    <option value="Slide Deck / Presentation">Slide Deck / Presentation</option>
+                    <option value="CAD / 3D Model">CAD / 3D Model</option>
+                    <option value="Design Wireframes">Design Wireframes</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  {/* Labeled to student option */}
+                  <label className="block text-[11px] font-bold text-emerald-800 mb-0.5">
+                    Label File to Student (Attribution) *
+                  </label>
+                  <select
+                    value={fileStudentIdInput}
+                    onChange={(e) => setFileStudentIdInput(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 bg-emerald-50/50 border border-emerald-300 rounded-lg text-emerald-950 font-medium"
+                  >
+                    <option value="team">Whole Team Deliverable</option>
+                    {teamMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.name} {member.id === currentUser.id ? '(You)' : ''} — {member.role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                    Estimated File Size
+                  </label>
+                  <input
+                    type="text"
+                    value={fileSizeInput}
+                    onChange={(e) => setFileSizeInput(e.target.value)}
+                    placeholder="e.g. 2.4 MB"
+                    className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                  File Summary / Note (Optional)
+                </label>
                 <input
                   type="text"
-                  value={newUseCaseInput}
-                  onChange={(e) => setNewUseCaseInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addUseCase();
-                    }
-                  }}
-                  placeholder="Add a concrete use case..."
-                  className="flex-1 text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
+                  value={fileNoteInput}
+                  onChange={(e) => setFileNoteInput(e.target.value)}
+                  placeholder="e.g. Authored hardware spec and battery thermal benchmark report."
+                  className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg"
                 />
-                <button
-                  type="button"
-                  onClick={addUseCase}
-                  className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors cursor-pointer"
-                >
-                  Add Use Case
-                </button>
               </div>
+
+              <button
+                type="button"
+                onClick={handleAddAttachedFile}
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Attach File & Label to Student</span>
+              </button>
             </div>
           </div>
 
-          {/* Code Sharing Choice (REQUIRED - 3 Options) */}
+          {/* Section 5: Code Access Policy */}
           <div className="space-y-3 pt-2 border-t border-slate-100">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                Code Sharing Choice *
-              </label>
-              <p className="text-xs text-slate-500 mb-3">
-                Decide whether to provide public code, keep code on request, or show as demo only.
-              </p>
-            </div>
-
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              Source Code Access Setting *
+            </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Option 1: Public Code */}
+              {/* Option 1: Public */}
               <label
-                className={`flex flex-col p-3.5 rounded-xl border transition-all cursor-pointer ${
-                  codeAvailability === 'public'
-                    ? 'border-emerald-500 bg-emerald-50/40 ring-1 ring-emerald-500'
-                    : isClassProject
-                    ? 'opacity-40 cursor-not-allowed bg-slate-50 border-slate-200'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                className={`relative flex flex-col p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                  isClassProject
+                    ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200'
+                    : codeAvailability === 'public'
+                    ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20'
+                    : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                    <GitBranch className="w-4 h-4 text-emerald-600" />
-                    <span>1. Public code</span>
-                  </div>
-                  <input
-                    type="radio"
-                    name="codeAvailability"
-                    value="public"
-                    disabled={isClassProject}
-                    checked={codeAvailability === 'public'}
-                    onChange={() => setCodeAvailability('public')}
-                    className="text-emerald-600"
-                  />
+                <input
+                  type="radio"
+                  name="codeAvailability"
+                  disabled={isClassProject}
+                  checked={codeAvailability === 'public'}
+                  onChange={() => setCodeAvailability('public')}
+                  className="sr-only"
+                />
+                <div className="flex items-center gap-1.5 font-bold text-emerald-800 mb-1">
+                  <GitBranch className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Public Code</span>
                 </div>
-                <p className="text-[11px] text-slate-600 leading-snug">
-                  Link a GitHub repo. Full code is visible to everyone on your project page.
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  Link your public GitHub repository so visitors can view code and star repo.
                 </p>
-                {isClassProject && (
-                  <span className="text-[10px] text-rose-600 font-semibold mt-2">
-                    Blocked for class projects
+              </label>
+
+              {/* Option 2: On Request */}
+              <label
+                className={`relative flex flex-col p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                  codeAvailability === 'on_request'
+                    ? 'border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="codeAvailability"
+                  checked={codeAvailability === 'on_request'}
+                  onChange={() => setCodeAvailability('on_request')}
+                  className="sr-only"
+                />
+                <div className="flex items-center gap-1.5 font-bold text-amber-800 mb-1">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                  <span>On Request</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  Source code is private. Interested users must submit a request and wait for approval.
+                </p>
+              </label>
+
+              {/* Option 3: None */}
+              <label
+                className={`relative flex flex-col p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                  codeAvailability === 'none'
+                    ? 'border-slate-500 bg-slate-100/60 ring-2 ring-slate-500/20'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="codeAvailability"
+                  checked={codeAvailability === 'none'}
+                  onChange={() => setCodeAvailability('none')}
+                  className="sr-only"
+                />
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 mb-1">
+                  <Eye className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Demo Only (No Code)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  Showcase UI/UX, videos, and deliverables without sharing underlying code.
+                </p>
+              </label>
+            </div>
+          </div>
+
+          {/* GitHub Repo Selector (if public) */}
+          {codeAvailability === 'public' && !isClassProject && (
+            <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Github className="w-4 h-4 text-slate-800" />
+                  <span className="text-xs font-bold text-slate-800">
+                    Attach GitHub Repository
+                  </span>
+                </div>
+                {currentUser.githubConnected && (
+                  <span className="text-[11px] text-emerald-700 font-medium">
+                    Connected as @{currentUser.githubUsername}
                   </span>
                 )}
-              </label>
+              </div>
 
-              {/* Option 2: Code available on request */}
-              <label
-                className={`flex flex-col p-3.5 rounded-xl border transition-all cursor-pointer ${
-                  codeAvailability === 'on_request'
-                    ? 'border-amber-500 bg-amber-50/40 ring-1 ring-amber-500'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                    <KeyRound className="w-4 h-4 text-amber-600" />
-                    <span>2. On request</span>
-                  </div>
-                  <input
-                    type="radio"
-                    name="codeAvailability"
-                    value="on_request"
-                    checked={codeAvailability === 'on_request'}
-                    onChange={() => setCodeAvailability('on_request')}
-                    className="text-amber-600"
-                  />
+              {currentUser.githubConnected ? (
+                <div>
+                  <select
+                    value={selectedRepoId}
+                    onChange={(e) => setSelectedRepoId(e.target.value)}
+                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a repository...</option>
+                    {userRepos.map((repo) => (
+                      <option key={repo.id} value={String(repo.id)}>
+                        {repo.full_name} ({repo.stargazers_count} ★) - {repo.language || 'Code'}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <p className="text-[11px] text-slate-600 leading-snug">
-                  Hidden by default. Students can send you an access request in your Inbox.
-                </p>
-              </label>
-
-              {/* Option 3: No code */}
-              <label
-                className={`flex flex-col p-3.5 rounded-xl border transition-all cursor-pointer ${
-                  codeAvailability === 'none'
-                    ? 'border-slate-600 bg-slate-100 ring-1 ring-slate-600'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                    <Eye className="w-4 h-4 text-slate-600" />
-                    <span>3. No code</span>
-                  </div>
-                  <input
-                    type="radio"
-                    name="codeAvailability"
-                    value="none"
-                    checked={codeAvailability === 'none'}
-                    onChange={() => setCodeAvailability('none')}
-                    className="text-slate-600"
-                  />
-                </div>
-                <p className="text-[11px] text-slate-600 leading-snug">
-                  Shown as a demo and description only. No repository links.
-                </p>
-              </label>
-            </div>
-
-            {/* GitHub Repo Attachment (Active when Public Code is selected) */}
-            {codeAvailability === 'public' && !isClassProject && (
-              <div className="mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Github className="w-4 h-4 text-slate-800" />
-                    <span className="text-xs font-bold text-slate-900">Attach GitHub Repository</span>
-                  </div>
-
-                  {currentUser.githubConnected ? (
-                    <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                      Connected: @{currentUser.githubUsername}
-                    </span>
-                  ) : (
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500">
+                    Connect your GitHub account or paste a public repo URL:
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={customRepoUrl}
+                      onChange={(e) => setCustomRepoUrl(e.target.value)}
+                      placeholder="https://github.com/username/project-repo"
+                      className="flex-1 text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none"
+                    />
                     <button
                       type="button"
                       onClick={openGitHubModal}
-                      className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                      className="px-3 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors cursor-pointer"
                     >
-                      Connect GitHub Account
+                      Connect GitHub
                     </button>
-                  )}
-                </div>
-
-                {currentUser.githubConnected ? (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Select from your fetched repositories:
-                    </label>
-                    <select
-                      value={selectedRepoId}
-                      onChange={(e) => {
-                        setSelectedRepoId(e.target.value);
-                        const repo = userRepos.find((r) => String(r.id) === e.target.value);
-                        if (repo) setCustomRepoUrl(repo.html_url);
-                      }}
-                      className="w-full text-xs font-mono p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                    >
-                      <option value="">-- Choose a public repo --</option>
-                      {userRepos.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name} ({r.language || 'Code'} · ★ {r.stargazers_count})
-                        </option>
-                      ))}
-                    </select>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-600">
-                      Connect your GitHub username to quickly attach any public repository:
-                    </p>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={inlineGithubUser}
-                        onChange={(e) => setInlineGithubUser(e.target.value)}
-                        placeholder="Enter GitHub username (e.g., alexchen)..."
-                        className="flex-1 text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleInlineConnect}
-                        disabled={isInlineConnecting}
-                        className="px-3 py-1.5 text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                      >
-                        {isInlineConnecting ? 'Fetching...' : 'Connect'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                    Or paste GitHub Repository URL directly:
-                  </label>
-                  <input
-                    type="url"
-                    value={customRepoUrl}
-                    onChange={(e) => setCustomRepoUrl(e.target.value)}
-                    placeholder="https://github.com/username/repository"
-                    className="w-full text-xs font-mono px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Project Status & Open Roles */}
-          <div className="space-y-4 pt-2 border-t border-slate-100">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                Project Status *
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['Active', 'Looking for collaborators', 'Finished'] as ProjectStatus[]).map(
-                  (st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setStatus(st)}
-                      className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
-                        status === st
-                          ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-2xs'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  )
-                )}
-              </div>
+              )}
             </div>
-
-            {/* If looking for collaborators: Add Open Roles */}
-            {status === 'Looking for collaborators' && (
-              <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-950">
-                    Open Roles Wanted for Collaborators
-                  </span>
-                  <span className="text-[11px] text-blue-700">
-                    Students can apply or message about these roles
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {openRoles.map((role) => (
-                    <span
-                      key={role}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-300 text-blue-900 rounded-lg text-xs font-medium"
-                    >
-                      <span>{role}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeRole(role)}
-                        className="text-blue-400 hover:text-rose-600 transition-colors cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newRoleInput}
-                    onChange={(e) => setNewRoleInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addRole();
-                      }
-                    }}
-                    placeholder="e.g., Frontend dev, UI designer, Firmware specialist..."
-                    className="flex-1 text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={addRole}
-                    className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors cursor-pointer"
-                  >
-                    Add Role
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Tags for skills, languages, topics */}
           <div className="space-y-3 pt-2 border-t border-slate-100">
@@ -711,9 +1055,10 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
           <button
             type="button"
             onClick={handleSubmit}
-            className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition-colors cursor-pointer"
+            className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
           >
-            Publish to Showcase
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Publish to collabr</span>
           </button>
         </div>
       </div>

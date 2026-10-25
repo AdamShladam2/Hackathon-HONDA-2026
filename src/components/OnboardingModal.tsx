@@ -63,10 +63,10 @@ export const OnboardingModal: React.FC = () => {
         {/* Top Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs">
-              SK
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+              co
             </div>
-            <span className="font-bold text-slate-900 text-sm tracking-tight">Welcome to SkillSink</span>
+            <span className="font-bold text-slate-900 text-sm tracking-tight">Welcome to collabr</span>
           </div>
           <button
             onClick={closeOnboardingModal}

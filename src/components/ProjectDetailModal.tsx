@@ -26,6 +26,10 @@ import {
   ArrowRight,
   ShieldCheck,
   Building2,
+  Paperclip,
+  FileText,
+  Download,
+  UserCheck,
 } from 'lucide-react';
 
 interface ProjectDetailModalProps {
@@ -228,6 +232,25 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
 
           {/* Title & Summary */}
           <div>
+            {(project.courseCode || project.courseName || project.professorName) && (
+              <div className="flex items-center gap-2 flex-wrap mb-3 p-2.5 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs text-indigo-900">
+                <GraduationCap className="w-4 h-4 text-indigo-600 shrink-0" />
+                {project.courseCode && (
+                  <span className="font-bold font-mono px-2 py-0.5 rounded bg-white text-indigo-950 border border-indigo-200 shadow-2xs">
+                    {project.courseCode}
+                  </span>
+                )}
+                {project.courseName && (
+                  <span className="font-semibold text-slate-800">{project.courseName}</span>
+                )}
+                {project.professorName && (
+                  <span className="text-indigo-800 bg-white/80 border border-indigo-200 px-2 py-0.5 rounded-md font-medium sm:ml-auto">
+                    Instructor: <strong className="font-semibold text-indigo-950">{project.professorName}</strong>
+                  </span>
+                )}
+              </div>
+            )}
+
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mb-2">
               {project.title}
             </h1>
@@ -317,6 +340,68 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
               {project.description}
             </div>
           </div>
+
+          {/* Attached Files & Student-Labeled Deliverables */}
+          {project.attachedFiles && project.attachedFiles.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 text-blue-600" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Attached Deliverables & Project Files ({project.attachedFiles.length})
+                  </h2>
+                </div>
+                <span className="text-[11px] text-slate-500">Each deliverable is labeled to a student contributor</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {project.attachedFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="p-3.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl transition-all flex flex-col justify-between gap-3 text-xs"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-start gap-2.5">
+                        <div className="p-2 bg-blue-100 text-blue-700 rounded-lg shrink-0 mt-0.5">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-900 block truncate" title={file.name}>
+                            {file.name}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono">
+                            {file.type || 'Deliverable'} · {file.size || 'Document'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {file.description && (
+                        <p className="text-[11px] text-slate-600 leading-relaxed bg-white/80 p-2 rounded-lg border border-slate-200/60">
+                          {file.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between gap-2">
+                      <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md min-w-0">
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="truncate">Contributed by: {file.labeledStudentName || 'Team Member'}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => showToast(`Opening "${file.name}" for preview`, 'info')}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors cursor-pointer shrink-0"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>View File</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Deliverables & Collaboration Model (For Work Projects) */}
           {(project.deliverables?.length || project.compensationInfo) && (
@@ -484,26 +569,46 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
             </div>
 
             {/* Team Members */}
-            <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-900">Project Team Roster</span>
+                <span className="font-bold text-slate-900">Project Team Roster & Roles</span>
                 <span className="text-slate-500 tabular-nums">
                   {project.teamMembers.length} {project.teamMembers.length === 1 ? 'member' : 'members'}
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {project.teamMembers.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <img
-                        src={member.avatar}
-                        alt={member.name}
-                        referrerPolicy="no-referrer"
-                        className="w-6 h-6 rounded-full object-cover border border-slate-200 shrink-0"
-                      />
-                      <span className="font-semibold text-slate-800 truncate">{member.name}</span>
+                  <div key={member.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <img
+                          src={member.avatar}
+                          alt={member.name}
+                          referrerPolicy="no-referrer"
+                          className="w-7 h-7 rounded-full object-cover border border-slate-200 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-800 block truncate">{member.name}</span>
+                          <span className="text-slate-500 text-[11px] block truncate">{member.role}</span>
+                        </div>
+                      </div>
+                      {member.identity && (
+                        <span className="text-[10px] bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium shrink-0 shadow-2xs">
+                          {member.identity}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-slate-500 truncate text-[11px]">{member.role}</span>
+
+                    {member.contributionDescription && (
+                      <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 shadow-2xs">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block mb-0.5">
+                          What this student worked on:
+                        </span>
+                        <p className="text-[11px] leading-relaxed text-slate-600">
+                          {member.contributionDescription}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

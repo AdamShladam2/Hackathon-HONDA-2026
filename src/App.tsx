@@ -121,12 +121,12 @@ const MainApp: React.FC = () => {
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500 text-center">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-800">SkillSink</span>
+            <span className="font-extrabold text-slate-800 lowercase">collabr</span>
             <span>·</span>
-            <span>Unifying Campus Hub, Work Hub, and Universal Project Showcase</span>
+            <span>University Coursework, Project Showcase & Team Collaboration Network</span>
           </div>
           <div>
-            <span>Cross-hub collaboration for university students & working professionals</span>
+            <span>Connect by course & professor · Attach labeled deliverables · Document individual work</span>
           </div>
         </div>
       </footer>
