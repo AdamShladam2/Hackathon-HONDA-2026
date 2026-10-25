@@ -54,12 +54,51 @@ function canvasApiProxy(): Plugin {
     name: 'canvas-api-proxy',
     configureServer(server) {
       server.middlewares.use(handler);
+      server.middlewares.use(feedHandler);
     },
     configurePreviewServer(server) {
       server.middlewares.use(handler);
+      server.middlewares.use(feedHandler);
     },
   };
 }
+
+// Canvas calendar feeds (Calendar → Calendar Feed) need no token. The feed link is sent in the
+// X-Canvas-Feed-Url header so it stays out of URLs and logs; only *.ics feed paths are fetched.
+const feedHandler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+  if (req.url !== '/canvas-feed') return next();
+
+  let feedUrl: URL | null = null;
+  try {
+    feedUrl = new URL(String(req.headers['x-canvas-feed-url'] || ''));
+  } catch {
+    feedUrl = null;
+  }
+  if (
+    req.method !== 'GET' ||
+    !feedUrl ||
+    feedUrl.protocol !== 'https:' ||
+    !isAllowedCanvasHost(feedUrl.hostname.toLowerCase()) ||
+    !/^\/feeds\/calendars\/[^/]+\.ics$/.test(feedUrl.pathname)
+  ) {
+    res.statusCode = 400;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: 'That is not a Canvas calendar feed link.' }));
+    return;
+  }
+
+  try {
+    const upstream = await fetch(feedUrl.href, { headers: { Accept: 'text/calendar' } });
+    if (!isAllowedCanvasHost(new URL(upstream.url).hostname.toLowerCase())) throw new Error('redirected');
+    res.statusCode = upstream.status;
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'text/calendar');
+    res.end(Buffer.from(await upstream.arrayBuffer()));
+  } catch {
+    res.statusCode = 502;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: `Could not reach ${feedUrl.hostname}` }));
+  }
+};
 
 export default defineConfig(() => {
   return {

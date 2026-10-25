@@ -73,14 +73,17 @@ export function describeFileType(name: string, mimeType = ''): string {
 // Stores a picked file and returns its attachment record
 export async function storeUploadedFile(
   file: File,
-  attribution: { labeledStudentId?: string; labeledStudentName?: string; description?: string }
+  attribution: { labeledStudentId?: string; labeledStudentName?: string; description?: string },
+  // Path inside an uploaded folder, e.g. "my-project/src/app.ts"
+  displayName?: string
 ): Promise<ProjectAttachedFile> {
   const id = `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   await saveFileBlob(id, file);
   return {
     id,
-    name: file.name,
+    name: displayName || file.name,
     size: formatBytes(file.size),
+    sizeBytes: file.size,
     type: describeFileType(file.name, file.type),
     mimeType: file.type || undefined,
     url: '',

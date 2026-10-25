@@ -180,6 +180,158 @@ export async function connectCanvasBySchoolEmail(
   };
 }
 
+// Minimal iCalendar parsing: unfolds continuation lines and reads each VEVENT's properties
+function parseIcsEvents(ics: string): Record<string, string>[] {
+  const lines = ics.replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '').split('\n');
+  const events: Record<string, string>[] = [];
+  let current: Record<string, string> | null = null;
+  for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') current = {};
+    else if (line === 'END:VEVENT') {
+      if (current) events.push(current);
+      current = null;
+    } else if (current) {
+      const colon = line.indexOf(':');
+      if (colon === -1) continue;
+      const name = line.slice(0, colon).split(';')[0].toUpperCase();
+      current[name] = line
+        .slice(colon + 1)
+        .replace(/\\n/gi, '\n')
+        .replace(/\\([,;\\])/g, '$1');
+    }
+  }
+  return events;
+}
+
+// "20261030T035900Z" / "20261030T235900" / "20261030" → ISO string
+function parseIcsDate(value?: string): string | undefined {
+  const m = value?.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/);
+  if (!m) return undefined;
+  const [, y, mo, d, h = '23', mi = '59', s = '00', z] = m;
+  const date = new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}${z ? 'Z' : ''}`);
+  return isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+// Connects with the student's private Canvas calendar feed link (Canvas → Calendar →
+// Calendar Feed). It needs no token and lists each course's assignments with due dates.
+export async function connectCanvasByCalendarFeed(
+  email: string,
+  feedUrl: string
+): Promise<{ success: boolean; connection: CanvasUserConnection; message: string }> {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!isEduEmail(cleanEmail)) {
+    throw new Error('Canvas and Campus mode require a .edu school email address.');
+  }
+  let feed: URL;
+  try {
+    feed = new URL(feedUrl.trim());
+  } catch {
+    throw new Error('Paste the full calendar feed link from Canvas (it ends in .ics).');
+  }
+  if (!/\/feeds\/calendars\/[^/]+\.ics$/.test(feed.pathname)) {
+    throw new Error('That is not a Canvas calendar feed link. In Canvas open Calendar → Calendar Feed and copy the link.');
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  let res: Response;
+  try {
+    res = await fetch('/canvas-feed', { signal: controller.signal, headers: { 'X-Canvas-Feed-Url': feed.href } });
+  } catch {
+    throw new Error(`Could not reach Canvas at ${feed.hostname}. Make sure the app is running with npm run dev.`);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(
+      body?.error ||
+        (res.status >= 400 && res.status < 500
+          ? 'Canvas did not recognize that feed link. Copy it again from Calendar → Calendar Feed.'
+          : `Canvas feed request failed (${res.status}).`)
+    );
+  }
+  const ics = await res.text();
+  if (!ics.includes('BEGIN:VCALENDAR')) {
+    throw new Error('That link did not return a calendar. Copy it again from Calendar → Calendar Feed.');
+  }
+
+  const institution = resolveInstitutionFromEmail(cleanEmail);
+  const domain = feed.hostname.toLowerCase();
+  const courses = new Map<string, CanvasCourse>();
+  const feedAssignments: Record<string, CanvasAssignment[]> = {};
+
+  for (const ev of parseIcsEvents(ics)) {
+    const link = ev.URL || '';
+    const courseNumber = link.match(/course_(\d+)/)?.[1] || link.match(/\/courses\/(\d+)/)?.[1];
+    if (!courseNumber) continue; // personal calendar events
+    const summary = ev.SUMMARY || 'Untitled';
+    const bracket = summary.match(/\s*\[([^\]]+)\]\s*$/);
+    const courseLabel = bracket?.[1] || `Course ${courseNumber}`;
+    const courseId = `course-${courseNumber}`;
+
+    if (!courses.has(courseId)) {
+      courses.set(courseId, {
+        id: courseId,
+        courseCode: courseLabel,
+        name: courseLabel,
+        term: '',
+        department: institution.name,
+        section: '',
+        canvasUrl: `https://${domain}/courses/${courseNumber}`,
+        instructor: { id: `inst-${courseNumber}`, name: 'Course Instructor', email: '', avatar: '' },
+        studentCount: 0,
+        lookingForTeamCount: 0,
+        classmates: [],
+      });
+      feedAssignments[courseId] = [];
+    }
+
+    const assignmentNumber =
+      link.match(/assignment_(\d+)/)?.[1] ||
+      link.match(/\/assignments\/(\d+)/)?.[1] ||
+      (ev.UID || '').match(/assignment-(\d+)/)?.[1];
+    if (!assignmentNumber) continue; // course calendar events that aren't assignments
+    feedAssignments[courseId].push({
+      id: `canvas-asg-${assignmentNumber}`,
+      courseId,
+      courseCode: courseLabel,
+      name: bracket ? summary.slice(0, bracket.index).trim() : summary,
+      dueAt: parseIcsDate(ev.DTSTART),
+      htmlUrl: `https://${domain}/courses/${courseNumber}/assignments/${assignmentNumber}`,
+      submissionStatus: 'unknown',
+      submittedFiles: [],
+    });
+  }
+
+  Object.values(feedAssignments).forEach((list) =>
+    list.sort((a, b) => (a.dueAt || '').localeCompare(b.dueAt || ''))
+  );
+  const courseList = Array.from(courses.values()).sort((a, b) => a.courseCode.localeCompare(b.courseCode));
+  if (courseList.length === 0) {
+    throw new Error('Your calendar feed has no class events yet, so no classes could be found.');
+  }
+
+  const newConnection: CanvasUserConnection = {
+    isConnected: true,
+    schoolEmail: cleanEmail,
+    institutionName: institution.name,
+    institutionDomain: domain,
+    connectedAt: new Date().toISOString(),
+    source: 'canvas_calendar_feed',
+    courses: courseList,
+    feedAssignments,
+  };
+  saveCanvasConnection(newConnection);
+
+  const assignmentCount = Object.values(feedAssignments).reduce((n, list) => n + list.length, 0);
+  return {
+    success: true,
+    connection: newConnection,
+    message: `Connected to ${institution.name} Canvas. Found ${courseList.length} classes and ${assignmentCount} assignments.`,
+  };
+}
+
 export function getAllClassmates(courses: CanvasCourse[]): CanvasClassmate[] {
   const map = new Map<string, CanvasClassmate>();
   courses.forEach((c) => {
@@ -199,7 +351,7 @@ export async function fetchCanvasAssignments(
   connection: CanvasUserConnection,
   course: CanvasCourse,
   apiToken?: string
-): Promise<{ assignments: CanvasAssignment[]; source: 'canvas_api' | 'directory' }> {
+): Promise<{ assignments: CanvasAssignment[]; source: 'canvas_api' | 'calendar_feed' | 'directory' }> {
   const canvasCourseNumber = course.canvasUrl.match(/\/courses\/(\d+)/)?.[1];
 
   if (apiToken && canvasCourseNumber && connection.institutionDomain) {
@@ -235,6 +387,10 @@ export async function fetchCanvasAssignments(
         })),
       })),
     };
+  }
+
+  if (connection.source === 'canvas_calendar_feed') {
+    return { source: 'calendar_feed', assignments: connection.feedAssignments?.[course.id] || [] };
   }
 
   // Real Canvas connections need the token again after a page reload (it is never saved)

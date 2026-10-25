@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Project } from '../types';
 import { useApp } from '../context/AppContext';
 import { openAttachedFile } from '../services/fileStore';
+import { ProjectPeerAssessments } from './ProjectPeerAssessments';
 import {
   X,
   GitBranch,
@@ -528,6 +529,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
               </div>
             </div>
           )}
+
+          <ProjectPeerAssessments project={project} />
 
           {/* Author Profile Preview & Team */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">

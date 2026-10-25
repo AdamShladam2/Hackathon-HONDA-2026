@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Project, CodeAvailability, ProjectStatus, GitHubRepo, ProjectAttachedFile, TeamMember } from '../types';
 import { useApp } from '../context/AppContext';
 import { FileAttachmentInput } from './FileAttachmentInput';
+import { shortCourseCode } from '../services/campusAccess';
 import {
   X,
   GitBranch,
@@ -318,7 +319,15 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
   };
 
   // Quick course selection presets
-  const coursePresets = [
+  // With Canvas connected, quick fill offers the student's own classes
+  const canvasPresets = canvasConnection.isConnected
+    ? canvasConnection.courses.map((c) => ({
+        code: shortCourseCode(c.courseCode),
+        name: c.name !== c.courseCode ? c.name : shortCourseCode(c.courseCode),
+        prof: c.instructor.name === 'Course Instructor' ? '' : c.instructor.name,
+      }))
+    : [];
+  const coursePresets = canvasPresets.length > 0 ? canvasPresets : [
     { code: 'CSE 3901', name: 'Web Applications & Cloud Systems', prof: 'Dr. Rajiv Ramnath' },
     { code: 'CSE 5521', name: 'Survey of Artificial Intelligence', prof: 'Dr. Evelyn Vance' },
     { code: 'ECE 5020', name: 'Mixed Signal VLSI & Embedded Systems', prof: 'Prof. Robert Hayes' },
@@ -397,7 +406,8 @@ export const ShareProjectModal: React.FC<ShareProjectModalProps> = ({ onClose, i
                       : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50'
                   }`}
                 >
-                  {preset.code} ({preset.prof.split(' ').slice(-1)[0]})
+                  {preset.code}
+                  {preset.prof ? ` (${preset.prof.split(' ').slice(-1)[0]})` : ''}
                 </button>
               ))}
             </div>

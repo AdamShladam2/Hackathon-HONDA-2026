@@ -12,6 +12,7 @@ import {
   Plus,
   Lock,
   LayoutGrid,
+  BookOpen,
 } from 'lucide-react';
 import { ViewType } from '../context/AppContext';
 
@@ -90,6 +91,13 @@ export const Navbar: React.FC = () => {
             icon: GraduationCap,
             iconClass: 'text-emerald-600',
             activeClass: 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200',
+          },
+          {
+            label: 'My Classes',
+            views: ['my-classes'],
+            icon: BookOpen,
+            iconClass: 'text-indigo-600',
+            activeClass: 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200',
           },
           {
             label: 'Canvas Classes',

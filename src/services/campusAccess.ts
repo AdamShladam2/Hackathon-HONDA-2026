@@ -32,3 +32,15 @@ export function authorBelongsToCampus(author: Partial<Author> | undefined, campu
   const affiliation = (author.school || author.organization || '').toLowerCase();
   return affiliation === campus.name.toLowerCase();
 }
+
+// Canvas course codes carry section/term suffixes ("CSE 3901 (AU26)", "CSE-3901.0010").
+// Returns the plain "CSE 3901" form, or the trimmed input when it has no subject + number.
+export function shortCourseCode(code = ''): string {
+  const m = code.match(/\b([A-Z][A-Z&]{1,9})[\s-]*(\d{3,4}[A-Z]?)\b/i);
+  return m ? `${m[1].toUpperCase()} ${m[2].toUpperCase()}` : code.trim();
+}
+
+// Key for matching a post's course code against a Canvas course ("CSE3901")
+export function courseKey(code = ''): string {
+  return shortCourseCode(code).replace(/\s+/g, '').toUpperCase();
+}

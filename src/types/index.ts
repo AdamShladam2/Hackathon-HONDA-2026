@@ -282,6 +282,7 @@ export interface ProjectAttachedFile {
   uploadedAt: string;
   // Real uploads are kept in the browser's IndexedDB under this key (see services/fileStore)
   storageKey?: string;
+  sizeBytes?: number;
   mimeType?: string;
   source?: 'upload' | 'canvas';
   canvasCourseCode?: string;
@@ -295,6 +296,51 @@ export interface TeamMember {
   avatar: string;
   identity?: UserIdentity;
   contributionDescription?: string; // Description of what part of the project this student worked on
+  email?: string;
+}
+
+// A group Google Doc broken into sections, with each member's editing sessions
+// (derived from the doc's version history)
+export interface SharedDocumentSection {
+  id: string;
+  title: string;
+  difficulty: 1 | 2 | 3 | 4 | 5; // From the assignment rubric: 1 = routine, 5 = hardest
+  difficultyReason: string;
+}
+
+export interface DocumentEditSession {
+  id: string;
+  memberId: string;
+  sectionId: string;
+  start: string; // ISO time
+  minutes: number; // Active editing time (revisions less than 15 minutes apart)
+  wordsAdded: number;
+  wordsDeleted: number;
+  comments: number;
+  activity: 'writing' | 'revising' | 'reviewing' | 'data';
+  note: string;
+}
+
+export interface SharedDocumentActivity {
+  title: string;
+  assignmentName: string;
+  dueAt: string;
+  finalWordCount: number;
+  sections: SharedDocumentSection[];
+  sessions: DocumentEditSession[];
+}
+
+// One teammate's rating of another teammate's work on a single assignment
+export interface PeerAssessment {
+  id: string;
+  assignmentName: string;
+  reviewerId: string;
+  reviewerName: string;
+  revieweeId: string;
+  revieweeName: string;
+  rating: number; // 1-5
+  comment?: string;
+  createdAt: string;
 }
 
 export interface Project {
@@ -363,6 +409,9 @@ export interface Project {
   repositoryUrl?: string;
   documentationUrl?: string;
   evidenceList?: WorkEvidence[];
+  projectAssignments?: string[]; // Assignments this class project covers
+  peerAssessments?: PeerAssessment[];
+  sharedDocument?: SharedDocumentActivity; // Group Google Doc and its edit history
   skills?: string[];
   discipline?: string;
   school?: string;
@@ -710,7 +759,7 @@ export interface CanvasAssignment {
   dueAt?: string;
   pointsPossible?: number;
   htmlUrl: string;
-  submissionStatus: 'submitted' | 'graded' | 'unsubmitted' | 'pending_review';
+  submissionStatus: 'submitted' | 'graded' | 'unsubmitted' | 'pending_review' | 'unknown';
   submittedFiles: CanvasSubmissionFile[];
 }
 
@@ -721,8 +770,9 @@ export interface CanvasUserConnection {
   institutionName: string;
   institutionDomain: string; // e.g. "osu.instructure.com"
   connectedAt?: string;
-  source: 'verified_sso' | 'canvas_api_token' | 'domain_simulation';
+  source: 'verified_sso' | 'canvas_api_token' | 'canvas_calendar_feed' | 'domain_simulation';
   courses: CanvasCourse[];
   ownerEmail?: string; // Account that linked Canvas; defaults to schoolEmail
+  feedAssignments?: Record<string, CanvasAssignment[]>; // Calendar feed assignments, keyed by course id
 }
 

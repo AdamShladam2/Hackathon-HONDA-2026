@@ -28,12 +28,15 @@ import {
   ProjectAttachedFile,
   CanvasAssignment,
   UserIdentity,
+  PeerAssessment,
 } from '../types';
+import { LAB_REPORT_DEMO_PROJECT } from '../data/labReportDemo';
 import {
   loadSavedCanvasConnection,
   saveCanvasConnection,
   clearCanvasConnection,
   connectCanvasBySchoolEmail,
+  connectCanvasByCalendarFeed,
   getAllClassmates,
   fetchCanvasAssignments,
 } from '../services/canvasService';
@@ -91,16 +94,18 @@ export type ViewType =
   | 'teammate-match'
   | 'inbox'
   | 'workspace'
-  | 'canvas-classes';
+  | 'canvas-classes'
+  | 'my-classes';
 
 // Views that only exist in Campus mode (.edu accounts) or Discover mode (everyone)
-export const CAMPUS_VIEWS: ViewType[] = ['campus-hub', 'canvas-classes', 'teacher-dashboard'];
+export const CAMPUS_VIEWS: ViewType[] = ['campus-hub', 'my-classes', 'canvas-classes', 'teacher-dashboard'];
 export const DISCOVER_VIEWS: ViewType[] = ['discover', 'work-hub', 'showcase'];
 
 interface AppContextType {
   // Current user & account switching
   currentUser: Author;
   allDemoAccounts: Author[];
+  campusDirectory: Author[]; // Other app users at the signed-in user's campus
   switchUser: (userId: string) => void;
   isSignedIn: boolean;
   signInWithEmail: (details: { email: string; name: string; identity: UserIdentity }) => { success: boolean; message: string };
@@ -123,7 +128,12 @@ interface AppContextType {
   canvasConnection: CanvasUserConnection;
   isDemoAccount: boolean;
   isCanvasConnecting: boolean;
-  connectCanvas: (email: string, apiToken?: string, customDomain?: string) => Promise<{ success: boolean; message: string }>;
+  connectCanvas: (
+    email: string,
+    apiToken?: string,
+    customDomain?: string,
+    calendarFeedUrl?: string
+  ) => Promise<{ success: boolean; message: string }>;
   disconnectCanvas: () => void;
   isCanvasModalOpen: boolean;
   openCanvasModal: () => void;
@@ -132,9 +142,10 @@ interface AppContextType {
   setSelectedCanvasCourseId: (id: string) => void;
   allCanvasClassmates: CanvasClassmate[];
   classmatesLookingForTeam: CanvasClassmate[];
+  addPeerAssessments: (projectId: string, assessments: PeerAssessment[]) => void;
   loadCanvasAssignments: (
     courseId: string
-  ) => Promise<{ assignments: CanvasAssignment[]; source: 'canvas_api' | 'directory' }>;
+  ) => Promise<{ assignments: CanvasAssignment[]; source: 'canvas_api' | 'calendar_feed' | 'directory' }>;
 
   // Projects
   projects: Project[]; // All Showcase projects (combines work + campus showcase)
@@ -375,7 +386,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Class Projects for Campus Hub
   const [classProjects, setClassProjects] = useState<Project[]>(() => {
-    return loadFromStorage<Project[]>('classProjects', INITIAL_CLASS_PROJECTS);
+    const stored = loadFromStorage<Project[]>('classProjects', INITIAL_CLASS_PROJECTS);
+    // Demo lab report project added later, so make sure saved data includes it
+    return stored.some((p) => p.id === LAB_REPORT_DEMO_PROJECT.id) ? stored : [LAB_REPORT_DEMO_PROJECT, ...stored];
   });
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -426,7 +439,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const canvasMatchesCampus =
     rawCanvasConnection.isConnected &&
     canvasOwner === accountEmail.toLowerCase() &&
-    (isDemoAccount || rawCanvasConnection.source === 'canvas_api_token') &&
+    (isDemoAccount ||
+      rawCanvasConnection.source === 'canvas_api_token' ||
+      rawCanvasConnection.source === 'canvas_calendar_feed') &&
     isSameCampus(getCampusForEmail(rawCanvasConnection.schoolEmail), userCampus);
   const canvasConnection: CanvasUserConnection = canvasMatchesCampus
     ? rawCanvasConnection
@@ -1292,7 +1307,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const connectCanvas = async (
     email: string,
     apiToken?: string,
-    customDomain?: string
+    customDomain?: string,
+    calendarFeedUrl?: string
   ): Promise<{ success: boolean; message: string }> => {
     if (!userCampus) {
       showToast(campusLockedMessage, 'warning');
@@ -1306,11 +1322,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setIsCanvasConnecting(true);
     try {
-      const res = await connectCanvasBySchoolEmail(email, apiToken, customDomain, isDemoAccount);
+      const res = calendarFeedUrl
+        ? await connectCanvasByCalendarFeed(email, calendarFeedUrl)
+        : await connectCanvasBySchoolEmail(email, apiToken, customDomain, isDemoAccount);
       const owned = { ...res.connection, ownerEmail: accountEmail.toLowerCase() };
       saveCanvasConnection(owned);
       setCanvasConnection(owned);
-      setCanvasApiToken(apiToken?.trim() || undefined);
+      setCanvasApiToken(calendarFeedUrl ? undefined : apiToken?.trim() || undefined);
       setIsCanvasConnecting(false);
       showToast(res.message, 'success');
       return { success: true, message: res.message };
@@ -1333,6 +1351,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeCanvasModal = () => setIsCanvasModalOpen(false);
 
   const allCanvasClassmates = getAllClassmates(canvasConnection.courses || []);
+
+  const campusDirectory = [...ALL_DEMO_ACCOUNTS, ...localAccounts].filter(
+    (a, i, all) =>
+      a.id !== currentUser.id && authorBelongsToCampus(a, userCampus) && all.findIndex((b) => b.id === a.id) === i
+  );
+
+  // Saves a reviewer's ratings, replacing their earlier rating of the same person on the same assignment
+  const addPeerAssessments = (projectId: string, assessments: PeerAssessment[]) => {
+    const merge = (p: Project): Project => {
+      if (p.id !== projectId) return p;
+      const replaced = (p.peerAssessments || []).filter(
+        (old) =>
+          !assessments.some(
+            (n) =>
+              n.reviewerId === old.reviewerId &&
+              n.revieweeId === old.revieweeId &&
+              n.assignmentName.toLowerCase() === old.assignmentName.toLowerCase()
+          )
+      );
+      const names = new Set([...(p.projectAssignments || []), ...assessments.map((a) => a.assignmentName)]);
+      return { ...p, peerAssessments: [...replaced, ...assessments], projectAssignments: Array.from(names) };
+    };
+    setClassProjects((prev) => prev.map(merge));
+    setProjects((prev) => prev.map(merge));
+    setSelectedProject((prev) => (prev ? merge(prev) : prev));
+    showToast(`Saved ${assessments.length} peer assessment${assessments.length === 1 ? '' : 's'}`, 'success');
+  };
 
   const loadCanvasAssignments = async (courseId: string) => {
     const course = canvasConnection.courses.find((c) => c.id === courseId);
@@ -2048,6 +2093,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         allDemoAccounts: ALL_DEMO_ACCOUNTS,
+        campusDirectory,
+        addPeerAssessments,
         switchUser,
         isSignedIn,
         signInWithEmail,

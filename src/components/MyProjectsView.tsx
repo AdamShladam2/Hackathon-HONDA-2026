@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   FolderKanban,
@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Project } from '../types';
+import { DocumentEffortModal } from './DocumentEffortModal';
 
 export const MyProjectsView: React.FC = () => {
   const {
@@ -27,6 +28,8 @@ export const MyProjectsView: React.FC = () => {
     getUserRatingSummaryData,
   } = useApp();
 
+  const [docAnalysisProject, setDocAnalysisProject] = useState<Project | null>(null);
+
   const allProjects = [...projects, ...classProjects];
 
   // User's projects: either author or team member
@@ -38,6 +41,10 @@ export const MyProjectsView: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
+      {docAnalysisProject && (
+        <DocumentEffortModal project={docAnalysisProject} onClose={() => setDocAnalysisProject(null)} />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
@@ -188,9 +195,12 @@ export const MyProjectsView: React.FC = () => {
                       </button>
                     )}
 
-                    {/* Analyze Contributions Action */}
+                    {/* Analyze Contributions Action: projects written in a shared Google Doc
+                        get the time and difficulty analysis of the doc's edit history */}
                     <button
-                      onClick={() => openContributionAnalysisModal(project)}
+                      onClick={() =>
+                        project.sharedDocument ? setDocAnalysisProject(project) : openContributionAnalysisModal(project)
+                      }
                       className="px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <BarChart3 className="w-3.5 h-3.5 text-blue-600" />

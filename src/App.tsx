@@ -6,6 +6,7 @@ import { WorkHubView } from './components/WorkHubView';
 import { ProjectWorkspaceView } from './components/ProjectWorkspaceView';
 import { ProjectDetailModal } from './components/ProjectDetailModal';
 import { ShareProjectModal } from './components/ShareProjectModal';
+import { ClassProjectModal } from './components/ClassProjectModal';
 import { CreateWorkProjectModal } from './components/CreateWorkProjectModal';
 import { AccountSwitcherModal } from './components/AccountSwitcherModal';
 import { ApplyCollaborateModal } from './components/ApplyCollaborateModal';
@@ -29,6 +30,7 @@ import { ContributionAnalysisModal } from './components/ContributionAnalysisModa
 import { RateTeammateModal } from './components/RateTeammateModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { CanvasClassmatesView } from './components/CanvasClassmatesView';
+import { MyClassesView } from './components/MyClassesView';
 import { CanvasConnectModal } from './components/CanvasConnectModal';
 import { ModeSelectView } from './components/ModeSelectView';
 import { SignInView } from './components/SignInView';
@@ -66,7 +68,11 @@ const MainApp: React.FC = () => {
     removeToast,
     hasChosenMode,
     isSignedIn,
+    appMode,
   } = useApp();
+
+  const isNewCampusClassProject =
+    appMode === 'campus' && !!shareModalInitialData?.isClassProject && !shareModalInitialData?.id;
 
   // Signed out: email sign-in (or pick a demo account)
   if (!isSignedIn) {
@@ -116,6 +122,9 @@ const MainApp: React.FC = () => {
         {/* Canvas LMS Classmates & Course Roster View */}
         {activeView === 'canvas-classes' && <CanvasClassmatesView />}
 
+        {/* The student's classes and posts from classmates in each */}
+        {activeView === 'my-classes' && <MyClassesView />}
+
         {activeView === 'my-projects' && <MyProjectsView />}
 
         {/* Work Hub View */}
@@ -163,7 +172,12 @@ const MainApp: React.FC = () => {
         />
       )}
 
-      {isShareModalOpen && (
+      {/* New class projects in Campus mode use the simpler class project form */}
+      {isShareModalOpen && isNewCampusClassProject && (
+        <ClassProjectModal onClose={closeShareModal} initialData={shareModalInitialData} />
+      )}
+
+      {isShareModalOpen && !isNewCampusClassProject && (
         <ShareProjectModal
           onClose={closeShareModal}
           initialData={shareModalInitialData}

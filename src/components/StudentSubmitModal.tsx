@@ -21,6 +21,7 @@ export const StudentSubmitModal: React.FC = () => {
     closeStudentSubmitModal,
     currentUser,
     submitStudentWork,
+    showToast,
     campusClassAssignments: classAssignments,
   } = useApp();
 
@@ -31,35 +32,31 @@ export const StudentSubmitModal: React.FC = () => {
   const assignment = classAssignments.find((a) => a.id === selectedAssignmentId) || targetAssignmentForSubmission;
 
   const [textContent, setTextContent] = useState('');
-  const [codeSnippet, setCodeSnippet] = useState('');
-  const [codeLanguage, setCodeLanguage] = useState('TypeScript');
   const [githubUrl, setGithubUrl] = useState('');
-  const [googleDocsUrl, setGoogleDocsUrl] = useState('');
   const [individualContributionDesc, setIndividualContributionDesc] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<ProjectAttachedFile[]>([]);
 
-  // Pre-fill with sample student content if Alex Chen
   React.useEffect(() => {
     if (assignment) {
       setSelectedAssignmentId(assignment.id);
-    }
-    if (currentUser.id === 'user_alex_chen' && !textContent) {
-      setTextContent(
-        `SYSTEM BENCHMARKS & CACHE LINE ARCHITECTURE REPORT:\nAuthor: Alex Chen.\n\nWe evaluated the Raft cluster under 3-node partition scenarios using Go benchmark harnesses. The system sustained 4,800 operations per second with average commit latency under 12 milliseconds. To maintain state machine consistency, followers log heartbeats using monotonic term counters. Assignment requirements were thoroughly satisfied.`
-      );
-      setIndividualContributionDesc(
-        'Implemented consensus state machine, log compaction snapshots, and benchmark harness.'
-      );
-      setGithubUrl('https://github.com/alexchen/raft-kv-store');
-      setGoogleDocsUrl('https://docs.google.com/document/d/1demo-alex-raft-benchmarks/edit');
     }
   }, [assignment, currentUser]);
 
   if (!isStudentSubmitModalOpen) return null;
 
+  const isGroup = assignment?.assignmentType?.toLowerCase() === 'group';
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignment) return;
+    if (attachedFiles.length === 0) {
+      showToast('Upload your project files or folder before submitting.', 'warning');
+      return;
+    }
+    if (githubUrl.trim() && !/^https:\/\/(www\.)?github\.com\/[^/\s]+\/[^/\s]+/i.test(githubUrl.trim())) {
+      showToast('The GitHub link should look like https://github.com/user/repo.', 'warning');
+      return;
+    }
 
     submitStudentWork({
       assignmentId: assignment.id,
@@ -69,14 +66,11 @@ export const StudentSubmitModal: React.FC = () => {
       studentId: currentUser.id,
       studentName: currentUser.name,
       studentAvatar: currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160',
-      isGroupSubmission: assignment.assignmentType?.toLowerCase() === 'group',
+      isGroupSubmission: isGroup,
       revisionStatus: 'Original',
       textContent,
-      codeSnippet: codeSnippet.trim() ? codeSnippet : undefined,
-      codeLanguage: codeSnippet.trim() ? codeLanguage : undefined,
-      githubUrl: githubUrl.trim() ? githubUrl : undefined,
-      googleDocsUrl: googleDocsUrl.trim() ? googleDocsUrl : undefined,
-      individualContributionDesc,
+      githubUrl: githubUrl.trim() || undefined,
+      individualContributionDesc: individualContributionDesc.trim(),
       attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
     });
     setAttachedFiles([]);
@@ -134,97 +128,57 @@ export const StudentSubmitModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Written Project Text / Report *
-            </label>
-            <textarea
-              rows={4}
-              value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
-              placeholder="Paste your synthesis text, system architecture explanation, or benchmark findings..."
-              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-mono"
-              required
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Code Snippet (Optional)
-              </label>
-              <select
-                value={codeLanguage}
-                onChange={(e) => setCodeLanguage(e.target.value)}
-                className="px-2 py-0.5 text-[11px] rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-              >
-                <option value="TypeScript">TypeScript</option>
-                <option value="Python">Python</option>
-                <option value="Go">Go</option>
-                <option value="C++">C++</option>
-                <option value="Rust">Rust</option>
-              </select>
-            </div>
-            <textarea
-              rows={3}
-              value={codeSnippet}
-              onChange={(e) => setCodeSnippet(e.target.value)}
-              placeholder="Paste key algorithm implementation or data structure code..."
-              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-mono"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Repository Link (GitHub / GitLab)
-              </label>
-              <input
-                type="url"
-                value={githubUrl}
-                onChange={(e) => setGithubUrl(e.target.value)}
-                placeholder="https://github.com/username/repo"
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Google Docs Deliverable Link
-              </label>
-              <input
-                type="url"
-                value={googleDocsUrl}
-                onChange={(e) => setGoogleDocsUrl(e.target.value)}
-                placeholder="https://docs.google.com/document/d/..."
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Individual Contribution Description *
-            </label>
-            <input
-              type="text"
-              value={individualContributionDesc}
-              onChange={(e) => setIndividualContributionDesc(e.target.value)}
-              placeholder="Describe specifically what components, tests, and documentation you authored..."
-              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
-              required
-            />
-          </div>
-
-          <div>
             <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               <Paperclip className="w-3.5 h-3.5" />
-              Files (Optional)
+              Project Files or Folder *
             </label>
             <FileAttachmentInput
               files={attachedFiles}
               onChange={setAttachedFiles}
               allowCanvasImport
               canvasCourseCode={assignment?.classCode}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              GitHub Repository (Optional)
+            </label>
+            <input
+              type="url"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              placeholder="https://github.com/username/repo"
+              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+            />
+          </div>
+
+          {isGroup && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Your Part of the Group Work *
+              </label>
+              <input
+                type="text"
+                value={individualContributionDesc}
+                onChange={(e) => setIndividualContributionDesc(e.target.value)}
+                placeholder="Which components, tests, or documents did you write?"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+                required
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Note for Your Instructor (Optional)
+            </label>
+            <textarea
+              rows={2}
+              value={textContent}
+              onChange={(e) => setTextContent(e.target.value)}
+              placeholder="Anything your instructor should know about this submission"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
             />
           </div>
 
